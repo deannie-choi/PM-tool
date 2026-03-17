@@ -85,7 +85,7 @@ interface Project {
     eta: string;
     atd: string;
     ata: string;
-    documents: { name: string; received: boolean }[];
+    documents: { name: string; received: boolean; date?: string }[];
   };
   inlandTransport: {
     ddpDate: string;
@@ -122,6 +122,8 @@ interface Project {
   logs: { id: string; date: string; message: string; type: 'info' | 'warning' | 'error' | 'success' }[];
   paymentMilestones?: ProjectPaymentData;
   unitType?: 'HDE' | 'HPT' | '';
+  kv?: string;
+  mva?: string;
 }
 
 const mockProjects: Project[] = [
@@ -132,6 +134,8 @@ const mockProjects: Project[] = [
     serialNumber: 'S/N-TX-001',
     drawingNumber: 'DWG-AUS-2023-V1',
     unitType: 'HDE',
+    kv: '345',
+    mva: '600',
     currentStage: 'Ocean Freight',
     origin: 'Ulsan, KR',
     destination: 'Austin, TX, USA',
@@ -492,6 +496,8 @@ export default function App() {
       serialNumber: '',
       drawingNumber: '',
       unitType: '',
+      kv: '',
+      mva: '',
       currentStage: 'Manufacturing',
       origin: '',
       destination: '',
@@ -645,7 +651,7 @@ export default function App() {
         <div className="flex-1 overflow-auto px-4 sm:px-8 pb-8">
           <div className="pt-8">
             {!selectedProject && (
-              <div className="max-w-7xl mx-auto mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-xl shadow-sm border border-brand-dark/10">
+              <div className="w-full mx-auto mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-xl shadow-sm border border-brand-dark/10">
               <div className="flex items-center gap-2 text-brand-dark/60 font-medium text-sm">
                 <Filter size={16} /> Filters:
               </div>
@@ -677,17 +683,9 @@ export default function App() {
                     <option value="">All Transportation Vendors</option>
                     {uniqueCarriers.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <select 
-                    value={filterContractor} 
-                    onChange={e => setFilterContractor(e.target.value)}
-                    className="px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
-                  >
-                    <option value="">All Installation Vendors</option>
-                    {uniqueContractors.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
                 </>
               )}
-              {(searchQuery || filterCustomer || (activeTab !== 'payments' && (filterCarrier || filterContractor))) && (
+              {(searchQuery || filterCustomer || (activeTab !== 'payments' && filterCarrier)) && (
                 <button 
                   onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterCarrier(''); setFilterContractor(''); }}
                   className="text-xs font-medium text-brand-dark/50 hover:text-brand-dark"
@@ -716,7 +714,7 @@ export default function App() {
             ) : activeTab === 'transportation' ? (
               <TransportationView key="transportation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
             ) : activeTab === 'installation' ? (
-              <InstallationView key="installation" projects={filteredProjects} onSelectProject={(p) => setSelectedProjectId(p.id)} />
+              <InstallationView key="installation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
             ) : (
               <PaymentsView key="payments" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
             )}
@@ -785,7 +783,7 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="space-y-8 max-w-7xl mx-auto"
+      className="space-y-8 w-full mx-auto"
     >
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
@@ -987,6 +985,11 @@ const getBestDate = (actual?: string, estimated?: string) => {
   return undefined;
 };
 
+const getDeliveryLabel = (i: number) => {
+  const labels = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+  return `${labels[i] || (i + 1) + 'th'} Delivery`;
+};
+
 function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUpdate, onDelete }: { project: Project, currentUser: AppUser, users: AppUser[], allCustomers: string[], onBack: () => void, onUpdate: (p: Project) => void, onDelete: () => void }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'logs'>('overview');
   const [isEditing, setIsEditing] = useState(false);
@@ -1034,7 +1037,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="max-w-7xl mx-auto flex flex-col gap-6 relative"
+        className="w-full mx-auto flex flex-col gap-6 relative"
       >
       {/* Header */}
       <button 
@@ -1236,23 +1239,36 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                       {editData.oceanFreight.documents.map((doc, idx) => (
                         <React.Fragment key={doc.name}>
                           {isEditing ? (
-                            <label className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium border cursor-pointer transition-colors ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-brand-dark/5 text-brand-dark/60 border-brand-dark/20 hover:bg-brand-dark/10'}`}>
+                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-brand-dark/5 text-brand-dark/60 border-brand-dark/20'}`}>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                  type="checkbox" 
+                                  checked={doc.received} 
+                                  onChange={e => {
+                                    const newDocs = [...editData.oceanFreight.documents];
+                                    newDocs[idx].received = e.target.checked;
+                                    updateField(['oceanFreight', 'documents'], newDocs);
+                                  }} 
+                                  className={`w-3.5 h-3.5 rounded-sm cursor-pointer ${doc.received ? 'accent-brand-light' : 'accent-brand-dark'}`} 
+                                />
+                                {doc.name}
+                              </label>
                               <input 
-                                type="checkbox" 
-                                checked={doc.received} 
+                                type="date" 
+                                value={doc.date || ''} 
                                 onChange={e => {
                                   const newDocs = [...editData.oceanFreight.documents];
-                                  newDocs[idx].received = e.target.checked;
+                                  newDocs[idx].date = e.target.value;
                                   updateField(['oceanFreight', 'documents'], newDocs);
-                                }} 
-                                className={`w-3.5 h-3.5 rounded-sm cursor-pointer ${doc.received ? 'accent-brand-light' : 'accent-brand-dark'}`} 
+                                }}
+                                className={`ml-2 px-1 py-0.5 rounded text-xs focus:outline-none focus:ring-1 w-28 ${doc.received ? 'bg-brand-light/20 text-brand-light focus:ring-brand-light' : 'bg-white text-brand-dark focus:ring-brand-dark/30 border border-brand-dark/20'}`}
                               />
-                              {doc.name}
-                            </label>
+                            </div>
                           ) : (
                             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-white text-brand-dark/40 border-brand-dark/20'}`}>
                               <div className={`w-1.5 h-1.5 rounded-full ${doc.received ? 'bg-brand-light' : 'bg-brand-dark/20'}`} />
                               {doc.name}
+                              {doc.date && <span className="ml-1 opacity-70 text-xs">({doc.date})</span>}
                             </div>
                           )}
                         </React.Fragment>
@@ -1281,7 +1297,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                     </div>
                     <div>
                       <div className="text-xs text-brand-dark/50 mb-1">Discharging Method</div>
-                      <EditableText isEditing={isEditing} value={editData.inlandTransport.dischargingMethod} onChange={(v: string) => updateField(['inlandTransport', 'dischargingMethod'], v)} className="font-medium text-brand-dark" />
+                      <EditableSelect isEditing={isEditing} value={editData.inlandTransport.dischargingMethod} options={['Rail', 'Trailer', 'Barge']} onChange={(v: string) => updateField(['inlandTransport', 'dischargingMethod'], v)} className="font-medium text-brand-dark" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-6">
@@ -1295,9 +1311,23 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                       <span className="text-brand-dark/60">Site Visit:</span>
                       <EditableDate isEditing={isEditing} value={editData.inlandTransport.siteVisit} onChange={(v: string) => updateField(['inlandTransport', 'siteVisit'], v)} className="font-medium text-brand-dark bg-brand-dark/5 px-2 py-1 rounded border border-brand-dark/10" />
                     </div>
-                    <CheckboxItem label="Rail Clearance" checked={editData.inlandTransport.railClearance} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'railClearance'], v)} />
                     <CheckboxItem label="Road Permit" checked={editData.inlandTransport.roadPermit} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'roadPermit'], v)} />
                     <CheckboxItem label="POD Received" checked={editData.inlandTransport.podReceived} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'podReceived'], v)} />
+                  </div>
+                  <div className="pt-4 mt-4 border-t border-brand-dark/5">
+                    <div className="text-xs text-brand-dark/50 mb-1">Site Contact</div>
+                    {isEditing ? (
+                      <textarea 
+                        value={editData.inlandTransport.siteContact || ''}
+                        onChange={(e) => updateField(['inlandTransport', 'siteContact'], e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-brand-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
+                        placeholder="Enter site contact details (multiple contacts allowed)..."
+                      />
+                    ) : (
+                      <div className="text-sm text-brand-dark whitespace-pre-wrap">
+                        {editData.inlandTransport.siteContact || '-'}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1336,11 +1366,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                     <div className="space-y-2 mb-4">
                       {editData.installation.oilDeliveries.map((delivery, i) => (
                         <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-brand-dark/5 rounded-lg border border-brand-dark/5 text-sm gap-2">
-                          <EditableText isEditing={isEditing} value={delivery.name} onChange={(v: string) => {
-                            const newDel = [...editData.installation.oilDeliveries];
-                            newDel[i].name = v;
-                            updateField(['installation', 'oilDeliveries'], newDel);
-                          }} className="font-medium text-brand-dark/80" />
+                          <div className="font-medium text-brand-dark/80 w-24 shrink-0">{getDeliveryLabel(i)}</div>
                           <div className="flex items-center gap-4 text-brand-dark/60">
                             <span className="flex items-center gap-1">
                               <Calendar size={14}/> 
@@ -1375,7 +1401,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                       {isEditing && (
                         <button 
                           onClick={() => {
-                            const newDel = [...editData.installation.oilDeliveries, { name: 'New Delivery', date: '-', time: '00:00' }];
+                            const newDel = [...editData.installation.oilDeliveries, { name: '', date: '-', time: '00:00' }];
                             updateField(['installation', 'oilDeliveries'], newDel);
                           }}
                           className="w-full py-2 border border-dashed border-brand-dark/30 rounded-lg text-brand-dark/60 hover:text-brand-dark hover:border-brand-dark/50 flex items-center justify-center gap-2 text-sm transition-colors"
@@ -1544,7 +1570,7 @@ function CheckboxItem({ label, checked, isEditing, onChange }: any) {
 
 function ProjectList({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void }) {
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-brand-dark">All Projects</h2>
       <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
         {projects.map((p, index) => (
@@ -2193,7 +2219,7 @@ function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUp
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="max-w-7xl mx-auto flex flex-col gap-6 pb-12"
+      className="w-full mx-auto flex flex-col gap-6 pb-12"
     >
       <div className="flex flex-col gap-8">
         {projects.length > 0 ? (
@@ -2211,6 +2237,44 @@ function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUp
         )}
       </div>
     </motion.div>
+  );
+}
+
+function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProject }: { carrier: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void }) {
+  const [isGroupExpanded, setIsGroupExpanded] = useState(true);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 
+        className="text-lg font-bold text-brand-dark border-b border-brand-dark/10 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
+        onClick={() => setIsGroupExpanded(!isGroupExpanded)}
+      >
+        <Truck size={18} className="text-brand-dark/40" />
+        {carrier}
+        <span className="text-sm font-normal text-brand-dark/50 bg-brand-dark/5 px-2 py-0.5 rounded-full ml-2">{projs.length}</span>
+        <ChevronDown size={18} className={`ml-auto text-brand-dark/40 transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
+      </h3>
+      <AnimatePresence>
+        {isGroupExpanded && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex flex-col gap-3 overflow-hidden"
+          >
+            {projs.map(p => (
+              <TransportationCard 
+                key={p.id} 
+                project={p} 
+                isExpanded={expandedId === p.id} 
+                onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)} 
+                onUpdate={onUpdateProject} 
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -2240,24 +2304,14 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
         <div className="p-8 text-center text-brand-dark/50 bg-white rounded-xl border border-brand-dark/10">No projects found.</div>
       ) : (
         Object.entries(groupedProjects).map(([carrier, projs]) => (
-          <div key={carrier} className="flex flex-col gap-4">
-            <h3 className="text-lg font-bold text-brand-dark border-b border-brand-dark/10 pb-2 flex items-center gap-2">
-              <Truck size={18} className="text-brand-dark/40" />
-              {carrier}
-              <span className="text-sm font-normal text-brand-dark/50 bg-brand-dark/5 px-2 py-0.5 rounded-full ml-2">{projs.length}</span>
-            </h3>
-            <div className="flex flex-col gap-3">
-              {projs.map(p => (
-                <TransportationCard 
-                  key={p.id} 
-                  project={p} 
-                  isExpanded={expandedId === p.id} 
-                  onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)} 
-                  onUpdate={onUpdateProject} 
-                />
-              ))}
-            </div>
-          </div>
+          <CarrierGroup 
+            key={carrier} 
+            carrier={carrier} 
+            projs={projs} 
+            expandedId={expandedId} 
+            setExpandedId={setExpandedId} 
+            onUpdateProject={onUpdateProject} 
+          />
         ))
       )}
     </motion.div>
@@ -2275,14 +2329,14 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
     onUpdate(updated);
   };
 
-  const handleDocChange = (docName: string, received: boolean) => {
+  const handleDocChange = (docName: string, received: boolean, date?: string) => {
     const updated = { ...project };
     const docs = [...updated.oceanFreight.documents];
     const existingIdx = docs.findIndex(d => d.name === docName || (docName === 'SBL' && d.name === 'B/L'));
     if (existingIdx >= 0) {
-      docs[existingIdx] = { ...docs[existingIdx], received };
+      docs[existingIdx] = { ...docs[existingIdx], received, date: date !== undefined ? date : docs[existingIdx].date };
     } else {
-      docs.push({ name: docName, received });
+      docs.push({ name: docName, received, date });
     }
     updated.oceanFreight.documents = docs;
     onUpdate(updated);
@@ -2290,6 +2344,10 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 
   const getDoc = (docName: string) => {
     return project.oceanFreight.documents.find(d => d.name === docName || (docName === 'SBL' && d.name === 'B/L'))?.received || false;
+  };
+
+  const getDocDate = (docName: string) => {
+    return project.oceanFreight.documents.find(d => d.name === docName || (docName === 'SBL' && d.name === 'B/L'))?.date || '';
   };
 
   return (
@@ -2364,27 +2422,39 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
             exit={{ height: 0, opacity: 0 }}
             className="border-t border-brand-dark/10 bg-brand-light/20 overflow-hidden"
           >
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {/* General Info */}
+            <div className="p-6 flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+                {/* General Info */}
               <div className="space-y-4">
                 <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">General Info</h4>
                 <Field label="Vendor" value={project.unitType || ''} onChange={(v) => handleChange('unitType', v)} />
                 <Field label="Serial #" value={project.serialNumber || ''} onChange={(v) => handleChange('serialNumber', v)} />
                 <Field label="Customer" value={project.customer || ''} onChange={(v) => handleChange('customer', v)} />
                 <Field label="Project" value={project.name || ''} onChange={(v) => handleChange('name', v)} />
+                <Field label="KV" value={project.kv || ''} onChange={(v) => handleChange('kv', v)} />
+                <Field label="MVA" value={project.mva || ''} onChange={(v) => handleChange('mva', v)} />
+                <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
               </div>
 
-              {/* Documents & Status */}
+              {/* Ocean Transportation */}
               <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Documents & Status</h4>
-                <CheckboxField label="CIPL" checked={getDoc('CIPL')} onChange={(v) => handleDocChange('CIPL', v)} />
-                <CheckboxField label="ISF Filling" checked={getDoc('ISF')} onChange={(v) => handleDocChange('ISF', v)} />
-                <CheckboxField label="SBL" checked={getDoc('SBL')} onChange={(v) => handleDocChange('SBL', v)} />
-                <CheckboxField label="Arrival Notice" checked={getDoc('Arrival Notice')} onChange={(v) => handleDocChange('Arrival Notice', v)} />
-                <CheckboxField label="HH Permit status" checked={project.inlandTransport.roadPermit || false} onChange={(v) => handleChange('roadPermit', v, 'inlandTransport')} />
-                <CheckboxField label="Site visit report" checked={project.inlandTransport.siteVisitReport || false} onChange={(v) => handleChange('siteVisitReport', v, 'inlandTransport')} />
-                <CheckboxField label="Loading Drawing" checked={project.inlandTransport.loadingDrawing || false} onChange={(v) => handleChange('loadingDrawing', v, 'inlandTransport')} />
-                <CheckboxField label="Transportation Plan" checked={project.inlandTransport.transportationPlan || false} onChange={(v) => handleChange('transportationPlan', v, 'inlandTransport')} />
+                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Ocean Transportation</h4>
+                <CheckboxWithDateField label="1. CIPL" checked={getDoc('CIPL')} date={getDocDate('CIPL')} onCheckChange={(v) => handleDocChange('CIPL', v)} onDateChange={(v) => handleDocChange('CIPL', getDoc('CIPL'), v)} />
+                <CheckboxWithDateField label="2. ISF Filling" checked={getDoc('ISF')} date={getDocDate('ISF')} onCheckChange={(v) => handleDocChange('ISF', v)} onDateChange={(v) => handleDocChange('ISF', getDoc('ISF'), v)} />
+                <CheckboxWithDateField label="3. SBL" checked={getDoc('SBL')} date={getDocDate('SBL')} onCheckChange={(v) => handleDocChange('SBL', v)} onDateChange={(v) => handleDocChange('SBL', getDoc('SBL'), v)} />
+                <CheckboxWithDateField label="4. Inventory" checked={getDoc('Inventory')} date={getDocDate('Inventory')} onCheckChange={(v) => handleDocChange('Inventory', v)} onDateChange={(v) => handleDocChange('Inventory', getDoc('Inventory'), v)} />
+                <CheckboxWithDateField label="5. AN" checked={getDoc('Arrival Notice')} date={getDocDate('Arrival Notice')} onCheckChange={(v) => handleDocChange('Arrival Notice', v)} onDateChange={(v) => handleDocChange('Arrival Notice', getDoc('Arrival Notice'), v)} />
+                <CheckboxWithDateField label="6. Customs Clearance" checked={getDoc('Customs Clearance')} date={getDocDate('Customs Clearance')} onCheckChange={(v) => handleDocChange('Customs Clearance', v)} onDateChange={(v) => handleDocChange('Customs Clearance', getDoc('Customs Clearance'), v)} />
+              </div>
+
+              {/* Inland Transportation */}
+              <div className="space-y-4">
+                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Inland Transportation</h4>
+                <CheckboxWithDateField label="1. Rail Clearance" checked={getDoc('Rail Clearance')} date={getDocDate('Rail Clearance')} onCheckChange={(v) => handleDocChange('Rail Clearance', v)} onDateChange={(v) => handleDocChange('Rail Clearance', getDoc('Rail Clearance'), v)} />
+                <CheckboxWithDateField label="2. HH Permit" checked={getDoc('HH Permit status')} date={getDocDate('HH Permit status')} onCheckChange={(v) => handleDocChange('HH Permit status', v)} onDateChange={(v) => handleDocChange('HH Permit status', getDoc('HH Permit status'), v)} />
+                <CheckboxWithDateField label="3. Site Visit" checked={getDoc('Site visit report')} date={getDocDate('Site visit report')} onCheckChange={(v) => handleDocChange('Site visit report', v)} onDateChange={(v) => handleDocChange('Site visit report', getDoc('Site visit report'), v)} />
+                <CheckboxWithDateField label="4. Loading Drawing" checked={getDoc('Loading Drawing')} date={getDocDate('Loading Drawing')} onCheckChange={(v) => handleDocChange('Loading Drawing', v)} onDateChange={(v) => handleDocChange('Loading Drawing', getDoc('Loading Drawing'), v)} />
+                <CheckboxWithDateField label="5. Transportation Plan" checked={getDoc('Transportation Plan')} date={getDocDate('Transportation Plan')} onCheckChange={(v) => handleDocChange('Transportation Plan', v)} onDateChange={(v) => handleDocChange('Transportation Plan', getDoc('Transportation Plan'), v)} />
               </div>
 
               {/* Dates */}
@@ -2401,21 +2471,38 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
               {/* Logistics Details */}
               <div className="space-y-4">
                 <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Logistics Details</h4>
-                <Field label="Inventory" value={project.inlandTransport.inventory || ''} onChange={(v) => handleChange('inventory', v, 'inlandTransport')} />
                 <Field label="Transit time" value={project.inlandTransport.transitTime || ''} onChange={(v) => handleChange('transitTime', v, 'inlandTransport')} />
                 <Field label="Port" value={project.inlandTransport.port || project.origin || ''} onChange={(v) => handleChange('port', v, 'inlandTransport')} />
                 <Field label="Site Address" value={project.destination || ''} onChange={(v) => handleChange('destination', v)} />
-                <Field label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
-                <Field label="Method" value={project.inlandTransport.dischargingMethod || ''} onChange={(v) => handleChange('dischargingMethod', v, 'inlandTransport')} />
+                <SelectField label="Method" value={project.inlandTransport.dischargingMethod || ''} options={['Rail', 'Trailer', 'Barge']} onChange={(v) => handleChange('dischargingMethod', v, 'inlandTransport')} />
                 <Field label="Railcar #" value={project.inlandTransport.railcarNumber || ''} onChange={(v) => handleChange('railcarNumber', v, 'inlandTransport')} />
-                <Field label="Rail clearance" value={project.inlandTransport.railClearance || ''} onChange={(v) => handleChange('railClearance', v, 'inlandTransport')} />
                 <Field label="HH Vendor" value={project.inlandTransport.hhVendor || ''} onChange={(v) => handleChange('hhVendor', v, 'inlandTransport')} />
                 <Field label="Rigging Vendor" value={project.inlandTransport.riggingVendor || project.installation.contractor || ''} onChange={(v) => handleChange('riggingVendor', v, 'inlandTransport')} />
               </div>
             </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function SelectField({ label, value, options, onChange }: { label: string, value: string, options: string[], onChange: (v: string) => void }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-bold text-brand-dark/60">{label}</label>
+      <div className="relative">
+        <select 
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-1.5 bg-white border border-brand-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow appearance-none"
+        >
+          <option value="" disabled>Select {label}</option>
+          {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-dark/40 pointer-events-none" />
+      </div>
     </div>
   );
 }
@@ -2434,8 +2521,42 @@ function Field({ label, value, onChange, type = "text" }: { label: string, value
   );
 }
 
+function TextAreaField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-bold text-brand-dark/60">{label}</label>
+      <textarea 
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="px-3 py-1.5 bg-white border border-brand-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[60px] resize-y"
+      />
+    </div>
+  );
+}
+
 function DateField({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
   return <Field label={label} value={value} onChange={onChange} type="date" />;
+}
+
+function CheckboxWithDateField({ label, checked, date, onCheckChange, onDateChange }: { label: string, checked: boolean, date: string, onCheckChange: (v: boolean) => void, onDateChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center justify-between group gap-4">
+      <label className="flex items-center gap-3 cursor-pointer flex-1">
+        <div className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${checked ? 'bg-emerald-500' : 'bg-brand-dark/20'}`}>
+          <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onCheckChange(e.target.checked)} />
+          <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+        </div>
+        <span className="text-sm font-medium text-brand-dark/80 group-hover:text-brand-dark truncate">{label}</span>
+      </label>
+      <input 
+        type="date" 
+        value={date} 
+        onChange={(e) => onDateChange(e.target.value)}
+        className="px-2 py-1 bg-white border border-brand-dark/20 rounded text-xs focus:outline-none focus:ring-1 focus:ring-brand-dark/30 w-32"
+      />
+    </div>
+  );
 }
 
 function CheckboxField({ label, checked, onChange }: { label: string, checked: boolean, onChange: (v: boolean) => void }) {
@@ -2450,56 +2571,178 @@ function CheckboxField({ label, checked, onChange }: { label: string, checked: b
   );
 }
 
-function InstallationView({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void }) {
+function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdateProject }: { contractor: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void }) {
+  const [isGroupExpanded, setIsGroupExpanded] = useState(true);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 
+        className="text-lg font-bold text-brand-dark border-b border-brand-dark/10 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
+        onClick={() => setIsGroupExpanded(!isGroupExpanded)}
+      >
+        <Wrench size={18} className="text-brand-dark/40" />
+        {contractor}
+        <span className="text-sm font-normal text-brand-dark/50 bg-brand-dark/5 px-2 py-0.5 rounded-full ml-2">{projs.length}</span>
+        <ChevronDown size={18} className={`ml-auto text-brand-dark/40 transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
+      </h3>
+      <AnimatePresence>
+        {isGroupExpanded && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex flex-col gap-3 overflow-hidden"
+          >
+            {projs.map(p => (
+              <InstallationCard 
+                key={p.id} 
+                project={p} 
+                isExpanded={expandedId === p.id} 
+                onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)} 
+                onUpdate={onUpdateProject} 
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void }) {
+  const handleChange = (field: string, value: any, nestedObj?: 'oceanFreight' | 'inlandTransport' | 'installation') => {
+    const updated = { ...project };
+    if (nestedObj) {
+      updated[nestedObj] = { ...updated[nestedObj], [field]: value };
+    } else {
+      (updated as any)[field] = value;
+    }
+    onUpdate(updated);
+  };
+
+  const oilDeliveries = [...(project.installation.oilDeliveries || [])];
+  while (oilDeliveries.length < 4) {
+    oilDeliveries.push({ name: '', date: '', time: '' });
+  }
+
+  const handleOilChange = (index: number, field: string, value: string) => {
+    const newDeliveries = [...oilDeliveries];
+    newDeliveries[index] = { ...newDeliveries[index], [field]: value };
+    handleChange('oilDeliveries', newDeliveries, 'installation');
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden transition-all">
+      <div onClick={onToggle} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer hover:bg-brand-dark/5 transition-colors">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="flex flex-col">
+            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">SO#</span>
+            <span className="text-sm font-bold text-brand-dark truncate">{project.id}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Project</span>
+            <span className="text-sm font-medium text-brand-dark truncate" title={project.name}>{project.name}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Customer</span>
+            <span className="text-sm text-brand-dark truncate" title={project.customer}>{project.customer}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-6 sm:w-auto w-full justify-between sm:justify-end">
+          <div className="flex flex-col hidden md:flex">
+            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Start Date</span>
+            <span className="text-sm text-brand-dark font-medium truncate">{project.installation.startDate || '-'}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark">
+              {project.currentStage}
+            </span>
+            <ChevronDown className={`text-brand-dark/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-brand-dark/10 bg-brand-light/20 overflow-hidden"
+          >
+            <div className="p-6 flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Field label="Customer" value={project.customer || ''} onChange={(v) => handleChange('customer', v)} />
+                <Field label="Project" value={project.name || ''} onChange={(v) => handleChange('name', v)} />
+                <Field label="KV" value={project.kv || ''} onChange={(v) => handleChange('kv', v)} />
+                <Field label="MVA" value={project.mva || ''} onChange={(v) => handleChange('mva', v)} />
+                <Field label="Serial #" value={project.serialNumber || ''} onChange={(v) => handleChange('serialNumber', v)} />
+                <DateField label="Delivery Date (DDP)" value={project.inlandTransport.ddpDate || ''} onChange={(v) => handleChange('ddpDate', v, 'inlandTransport')} />
+                <DateField label="Inst. Start Date" value={project.installation.startDate || ''} onChange={(v) => handleChange('startDate', v, 'installation')} />
+                <DateField label="Inst. End Date" value={project.installation.endDate || ''} onChange={(v) => handleChange('endDate', v, 'installation')} />
+                <Field label="Contractor" value={project.installation.contractor || ''} onChange={(v) => handleChange('contractor', v, 'installation')} />
+                <Field label="Supervisor" value={project.installation.supervisor || ''} onChange={(v) => handleChange('supervisor', v, 'installation')} />
+                <Field label="Site Address" value={project.destination || ''} onChange={(v) => handleChange('destination', v)} />
+              </div>
+              
+              <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
+
+              <div className="space-y-3 pt-2">
+                <h4 className="text-sm font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Oil Delivery Schedule</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-white p-3 rounded-lg border border-brand-dark/10 shadow-sm">
+                      <span className="text-sm font-bold text-brand-dark/60 w-24 shrink-0">{getDeliveryLabel(i)}</span>
+                      <div className="flex-1 sm:w-32"><DateField label="Date" value={oilDeliveries[i].date} onChange={(v) => handleOilChange(i, 'date', v)} /></div>
+                      <div className="flex-1 sm:w-24"><Field label="Time" type="time" value={oilDeliveries[i].time} onChange={(v) => handleOilChange(i, 'time', v)} /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function InstallationView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const groupedProjects = projects.reduce((acc, p) => {
+    const contractor = p.installation.contractor || 'Unassigned / TBD';
+    if (!acc[contractor]) acc[contractor] = [];
+    acc[contractor].push(p);
+    return acc;
+  }, {} as Record<string, Project[]>);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="max-w-7xl mx-auto"
+      className="w-full mx-auto flex flex-col gap-6 pb-12"
     >
-      <h2 className="text-2xl font-bold mb-6 text-brand-dark flex items-center gap-2">
+      <h2 className="text-2xl font-bold mb-2 text-brand-dark flex items-center gap-2">
         <Wrench className="text-brand-dark/50" />
         Installation Overview
       </h2>
-      <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-brand-dark/5 text-brand-dark/60 font-medium border-b border-brand-dark/10">
-              <tr>
-                <th className="p-4">Project</th>
-                <th className="p-4">Contractor</th>
-                <th className="p-4">Supervisor</th>
-                <th className="p-4">Start Date</th>
-                <th className="p-4">End Date</th>
-                <th className="p-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-dark/5">
-              {projects.map((p) => (
-                <tr key={p.id} onClick={() => onSelectProject(p)} className="hover:bg-brand-dark/5 cursor-pointer transition-colors">
-                  <td className="p-4">
-                    <div className="font-medium text-brand-dark">{p.name}</div>
-                    <div className="text-xs text-brand-dark/50">{p.id}</div>
-                  </td>
-                  <td className="p-4 text-brand-dark">{p.installation.contractor || '-'}</td>
-                  <td className="p-4 text-brand-dark">{p.installation.supervisor || '-'}</td>
-                  <td className="p-4 text-brand-dark">{p.installation.startDate || '-'}</td>
-                  <td className="p-4 text-brand-dark">{p.installation.endDate || '-'}</td>
-                  <td className="p-4">
-                    <span className="px-2 py-1 bg-brand-dark/10 rounded text-xs font-bold text-brand-dark">
-                      {p.currentStage}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {projects.length === 0 && (
-            <div className="p-8 text-center text-brand-dark/50">No projects found.</div>
-          )}
-        </div>
-      </div>
+      
+      {projects.length === 0 ? (
+        <div className="p-8 text-center text-brand-dark/50 bg-white rounded-xl border border-brand-dark/10">No projects found.</div>
+      ) : (
+        Object.entries(groupedProjects).map(([contractor, projs]) => (
+          <ContractorGroup 
+            key={contractor} 
+            contractor={contractor} 
+            projs={projs} 
+            expandedId={expandedId} 
+            setExpandedId={setExpandedId} 
+            onUpdateProject={onUpdateProject} 
+          />
+        ))
+      )}
     </motion.div>
   );
 }

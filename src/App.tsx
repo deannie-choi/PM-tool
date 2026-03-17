@@ -675,17 +675,28 @@ export default function App() {
               </select>
               {activeTab !== 'payments' && (
                 <>
-                  <select 
-                    value={filterCarrier} 
-                    onChange={e => setFilterCarrier(e.target.value)}
-                    className="px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
-                  >
-                    <option value="">All Transportation Vendors</option>
-                    {uniqueCarriers.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  {activeTab === 'installation' ? (
+                    <select 
+                      value={filterContractor} 
+                      onChange={e => setFilterContractor(e.target.value)}
+                      className="px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                    >
+                      <option value="">All Installation Contractors</option>
+                      {uniqueContractors.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  ) : (
+                    <select 
+                      value={filterCarrier} 
+                      onChange={e => setFilterCarrier(e.target.value)}
+                      className="px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                    >
+                      <option value="">All Transportation Vendors</option>
+                      {uniqueCarriers.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  )}
                 </>
               )}
-              {(searchQuery || filterCustomer || (activeTab !== 'payments' && filterCarrier)) && (
+              {(searchQuery || filterCustomer || (activeTab !== 'payments' && (filterCarrier || filterContractor))) && (
                 <button 
                   onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterCarrier(''); setFilterContractor(''); }}
                   className="text-xs font-medium text-brand-dark/50 hover:text-brand-dark"

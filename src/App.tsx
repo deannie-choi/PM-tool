@@ -5,9 +5,11 @@ import {
   ChevronRight, Plus, MoreVertical, MapPin, Calendar,
   ArrowLeft, Edit3, Sparkles, FileText, Activity,
   Check, Factory, PlayCircle, Save, X, Trash2, Filter,
-  LogOut, User, ChevronDown, CreditCard, Building2, DollarSign
+  LogOut, User, ChevronDown, CreditCard, Building2, DollarSign,
+  Network, BookOpen, GitBranch, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { SOPView } from './components/SOPView';
 
 type Stage = 'Manufacturing' | 'Ocean Freight' | 'Inland Transport' | 'Installation' | 'Commissioning';
 
@@ -109,6 +111,7 @@ interface Project {
     transportationPlan?: boolean;
     hhVendor?: string;
     riggingVendor?: string;
+    workflow?: Record<string, boolean>;
   };
   installation: {
     startDate: string;
@@ -473,7 +476,7 @@ function AdminDashboard({ users, setUsers, currentUser, onLogout }: { users: App
 export default function App() {
   const [users, setUsers] = useState<AppUser[]>(mockUsers);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'payments' | 'transportation' | 'installation'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'payments' | 'transportation' | 'installation' | 'sop'>('dashboard');
   const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
@@ -608,6 +611,13 @@ export default function App() {
             <CreditCard size={20} />
             Payments
           </button>
+          <button 
+            onClick={() => { setActiveTab('sop'); setSelectedProjectId(null); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'sop' && !selectedProject ? 'bg-brand-light/10 font-medium' : 'hover:bg-brand-light/5 opacity-80 hover:opacity-100'}`}
+          >
+            <BookOpen size={20} />
+            SOP Manual
+          </button>
         </nav>
 
         <div className="p-4 space-y-2">
@@ -673,7 +683,7 @@ export default function App() {
                 <option value="">All Customers</option>
                 {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              {activeTab !== 'payments' && (
+              {activeTab !== 'payments' && activeTab !== 'sop' && (
                 <>
                   {activeTab === 'installation' ? (
                     <select 
@@ -696,7 +706,7 @@ export default function App() {
                   )}
                 </>
               )}
-              {(searchQuery || filterCustomer || (activeTab !== 'payments' && (filterCarrier || filterContractor))) && (
+              {(searchQuery || filterCustomer || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
                 <button 
                   onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterCarrier(''); setFilterContractor(''); }}
                   className="text-xs font-medium text-brand-dark/50 hover:text-brand-dark"
@@ -726,6 +736,8 @@ export default function App() {
               <TransportationView key="transportation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
             ) : activeTab === 'installation' ? (
               <InstallationView key="installation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
+            ) : activeTab === 'sop' ? (
+              <SOPView key="sop" />
             ) : (
               <PaymentsView key="payments" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
             )}
@@ -2329,6 +2341,8 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
   );
 }
 
+
+
 function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void }) {
   const handleChange = (field: string, value: any, nestedObj?: 'oceanFreight' | 'inlandTransport' | 'installation') => {
     const updated = { ...project };
@@ -2644,8 +2658,8 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden transition-all">
-      <div onClick={onToggle} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer hover:bg-brand-dark/5 transition-colors">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
+      <div onClick={onToggle} className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-brand-dark/5 transition-colors">
+        <div className="flex-1 grid grid-cols-7 gap-4 items-center mr-4 py-2">
           <div className="flex flex-col">
             <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">SO#</span>
             <span className="text-sm font-bold text-brand-dark truncate">{project.id}</span>
@@ -2658,18 +2672,28 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
             <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Customer</span>
             <span className="text-sm text-brand-dark truncate" title={project.customer}>{project.customer}</span>
           </div>
-        </div>
-        <div className="flex items-center gap-6 sm:w-auto w-full justify-between sm:justify-end">
-          <div className="flex flex-col hidden md:flex">
+          <div className="flex flex-col">
+            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Contractor</span>
+            <span className="text-sm text-brand-dark truncate" title={project.installation.contractor || '-'}>{project.installation.contractor || '-'}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Serial #</span>
+            <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
+          </div>
+          <div className="flex flex-col">
             <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Start Date</span>
             <span className="text-sm text-brand-dark font-medium truncate">{project.installation.startDate || '-'}</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark">
-              {project.currentStage}
-            </span>
-            <ChevronDown className={`text-brand-dark/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          <div className="flex flex-col">
+            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">End Date</span>
+            <span className="text-sm text-brand-dark font-medium truncate">{project.installation.endDate || '-'}</span>
           </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark">
+            {project.currentStage}
+          </span>
+          <ChevronDown className={`text-brand-dark/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
 

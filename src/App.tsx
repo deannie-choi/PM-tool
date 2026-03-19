@@ -564,16 +564,7 @@ export default function App() {
     <div className="min-h-screen flex font-sans bg-brand-light text-brand-dark">
       {/* Sidebar */}
       <aside className="w-64 bg-brand-dark text-brand-light flex flex-col shrink-0">
-        <div className="p-6 flex items-center justify-center">
-          <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 w-full shadow-sm select-none">
-            <span className="text-4xl font-black tracking-tighter text-[#002C5F]">HD</span>
-            <div className="flex flex-col leading-none gap-0.5 mt-0.5">
-              <span className="text-[13px] font-black tracking-tight text-[#002C5F]">HYUNDAI</span>
-              <span className="text-[13px] font-black tracking-tight text-[#002C5F]">ELECTRIC</span>
-              <span className="text-[9px] font-bold tracking-widest text-[#007A33]">AMERICA</span>
-            </div>
-          </div>
-        </div>
+        <div className="p-6 h-[88px]"></div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
           <button 

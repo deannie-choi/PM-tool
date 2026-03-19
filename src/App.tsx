@@ -127,6 +127,7 @@ interface Project {
   unitType?: 'HDE' | 'HPT' | '';
   kv?: string;
   mva?: string;
+  sopTracker?: Record<string, { completed: boolean; date?: string; note?: string }>;
 }
 
 const mockProjects: Project[] = [
@@ -2461,16 +2462,33 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
                 <CheckboxWithDateField label="4. Inventory" checked={getDoc('Inventory')} date={getDocDate('Inventory')} onCheckChange={(v) => handleDocChange('Inventory', v)} onDateChange={(v) => handleDocChange('Inventory', getDoc('Inventory'), v)} />
                 <CheckboxWithDateField label="5. AN" checked={getDoc('Arrival Notice')} date={getDocDate('Arrival Notice')} onCheckChange={(v) => handleDocChange('Arrival Notice', v)} onDateChange={(v) => handleDocChange('Arrival Notice', getDoc('Arrival Notice'), v)} />
                 <CheckboxWithDateField label="6. Customs Clearance" checked={getDoc('Customs Clearance')} date={getDocDate('Customs Clearance')} onCheckChange={(v) => handleDocChange('Customs Clearance', v)} onDateChange={(v) => handleDocChange('Customs Clearance', getDoc('Customs Clearance'), v)} />
+                
+                <div className="pt-6 mt-2 border-t border-brand-dark/10">
+                  <h5 className="text-xs font-bold text-brand-dark/50 uppercase tracking-wider mb-2">Document Sharing (Vendor)</h5>
+                  <CheckboxWithDateField label="Packing List" checked={getDoc('Vendor - Packing List')} date={getDocDate('Vendor - Packing List')} onCheckChange={(v) => handleDocChange('Vendor - Packing List', v)} onDateChange={(v) => handleDocChange('Vendor - Packing List', getDoc('Vendor - Packing List'), v)} />
+                  <CheckboxWithDateField label="SBL" checked={getDoc('Vendor - SBL')} date={getDocDate('Vendor - SBL')} onCheckChange={(v) => handleDocChange('Vendor - SBL', v)} onDateChange={(v) => handleDocChange('Vendor - SBL', getDoc('Vendor - SBL'), v)} />
+                  <CheckboxWithDateField label="AN" checked={getDoc('Vendor - AN')} date={getDocDate('Vendor - AN')} onCheckChange={(v) => handleDocChange('Vendor - AN', v)} onDateChange={(v) => handleDocChange('Vendor - AN', getDoc('Vendor - AN'), v)} />
+                </div>
+
               </div>
 
               {/* Inland Transportation */}
               <div className="space-y-4">
                 <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Inland Transportation</h4>
                 <CheckboxWithDateField label="1. Rail Clearance" checked={getDoc('Rail Clearance')} date={getDocDate('Rail Clearance')} onCheckChange={(v) => handleDocChange('Rail Clearance', v)} onDateChange={(v) => handleDocChange('Rail Clearance', getDoc('Rail Clearance'), v)} />
-                <CheckboxWithDateField label="2. HH Permit" checked={getDoc('HH Permit status')} date={getDocDate('HH Permit status')} onCheckChange={(v) => handleDocChange('HH Permit status', v)} onDateChange={(v) => handleDocChange('HH Permit status', getDoc('HH Permit status'), v)} />
-                <CheckboxWithDateField label="3. Site Visit" checked={getDoc('Site visit report')} date={getDocDate('Site visit report')} onCheckChange={(v) => handleDocChange('Site visit report', v)} onDateChange={(v) => handleDocChange('Site visit report', getDoc('Site visit report'), v)} />
-                <CheckboxWithDateField label="4. Loading Drawing" checked={getDoc('Loading Drawing')} date={getDocDate('Loading Drawing')} onCheckChange={(v) => handleDocChange('Loading Drawing', v)} onDateChange={(v) => handleDocChange('Loading Drawing', getDoc('Loading Drawing'), v)} />
-                <CheckboxWithDateField label="5. Transportation Plan" checked={getDoc('Transportation Plan')} date={getDocDate('Transportation Plan')} onCheckChange={(v) => handleDocChange('Transportation Plan', v)} onDateChange={(v) => handleDocChange('Transportation Plan', getDoc('Transportation Plan'), v)} />
+                <CheckboxWithDateField label="2. Route Survey" checked={getDoc('Route Survey')} date={getDocDate('Route Survey')} onCheckChange={(v) => handleDocChange('Route Survey', v)} onDateChange={(v) => handleDocChange('Route Survey', getDoc('Route Survey'), v)} />
+                <CheckboxWithDateField label="3. HH Permit" checked={getDoc('HH Permit status')} date={getDocDate('HH Permit status')} onCheckChange={(v) => handleDocChange('HH Permit status', v)} onDateChange={(v) => handleDocChange('HH Permit status', getDoc('HH Permit status'), v)} />
+                <CheckboxWithDateField label="4. Site Visit" checked={getDoc('Site visit report')} date={getDocDate('Site visit report')} onCheckChange={(v) => handleDocChange('Site visit report', v)} onDateChange={(v) => handleDocChange('Site visit report', getDoc('Site visit report'), v)} />
+                <CheckboxWithDateField label="5. Loading Drawing" checked={getDoc('Loading Drawing')} date={getDocDate('Loading Drawing')} onCheckChange={(v) => handleDocChange('Loading Drawing', v)} onDateChange={(v) => handleDocChange('Loading Drawing', getDoc('Loading Drawing'), v)} />
+                <CheckboxWithDateField label="6. Transportation Plan" checked={getDoc('Transportation Plan')} date={getDocDate('Transportation Plan')} onCheckChange={(v) => handleDocChange('Transportation Plan', v)} onDateChange={(v) => handleDocChange('Transportation Plan', getDoc('Transportation Plan'), v)} />
+                
+                <div className="pt-6 mt-2 border-t border-brand-dark/10">
+                  <h5 className="text-xs font-bold text-brand-dark/50 uppercase tracking-wider mb-2">Document Sharing (Broker)</h5>
+                  <CheckboxWithDateField label="CIPL" checked={getDoc('Broker - CIPL')} date={getDocDate('Broker - CIPL')} onCheckChange={(v) => handleDocChange('Broker - CIPL', v)} onDateChange={(v) => handleDocChange('Broker - CIPL', getDoc('Broker - CIPL'), v)} />
+                  <CheckboxWithDateField label="SBL" checked={getDoc('Broker - SBL')} date={getDocDate('Broker - SBL')} onCheckChange={(v) => handleDocChange('Broker - SBL', v)} onDateChange={(v) => handleDocChange('Broker - SBL', getDoc('Broker - SBL'), v)} />
+                  <CheckboxWithDateField label="AN" checked={getDoc('Broker - AN')} date={getDocDate('Broker - AN')} onCheckChange={(v) => handleDocChange('Broker - AN', v)} onDateChange={(v) => handleDocChange('Broker - AN', getDoc('Broker - AN'), v)} />
+                  <CheckboxWithDateField label="COO" checked={getDoc('Broker - COO')} date={getDocDate('Broker - COO')} onCheckChange={(v) => handleDocChange('Broker - COO', v)} onDateChange={(v) => handleDocChange('Broker - COO', getDoc('Broker - COO'), v)} />
+                </div>
               </div>
 
               {/* Dates */}

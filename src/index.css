@@ -1,14 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-brand-dark: #102C26;
-  --color-brand-light: #F7E7CE;
+  --color-brand-dark: #1D3B31;
+  --color-brand-secondary: #54625A;
+  --color-brand-muted: #A58C6B;
+  --color-brand-light: #F6F2E7;
   --color-brand-surface: #FFFFFF;
-  --color-brand-muted: #E8D5B7;
+
+  --font-sans: "Inter", sans-serif;
 }
 
 body {
   background-color: var(--color-brand-light);
   color: var(--color-brand-dark);
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 

@@ -197,8 +197,19 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
     
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-        // App.tsx's onAuthStateChanged will handle the rest
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+        if (userDoc.exists()) {
+          onLogin(userDoc.data() as AppUser);
+        } else {
+          onLogin({
+            id: result.user.uid,
+            username: email.split('@')[0],
+            email: email,
+            name: result.user.displayName || 'Unknown User',
+            role: 'member'
+          });
+        }
       } else {
         if (!username || !password || !name) {
           setError('Please fill in all fields.');
@@ -287,7 +298,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-2xl shadow-xl border border-brand-dark/10 w-full max-w-md"
+        className="bg-white p-8 rounded-2xl shadow-xl border border-brand-secondary/30 w-full max-w-md"
       >
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 rounded-xl bg-brand-dark text-brand-light flex items-center justify-center font-bold text-3xl shadow-sm">
@@ -295,7 +306,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
           </div>
         </div>
         <h2 className="text-2xl font-bold text-center text-brand-dark mb-2">TransfoTrack</h2>
-        <p className="text-center text-brand-dark/60 mb-8 text-sm">
+        <p className="text-center text-brand-dark/80 mb-8 text-sm">
           {isLogin ? 'Sign in to your account' : 'Create a new account'}
         </p>
         
@@ -308,7 +319,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
                   type="text" 
                   value={name} 
                   onChange={e => { setName(e.target.value); setError(''); }} 
-                  className="w-full px-4 py-2 border border-brand-dark/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
+                  className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
                   placeholder="e.g. John Doe" 
                 />
               </div>
@@ -317,7 +328,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
                 <select 
                   value={role}
                   onChange={e => setRole(e.target.value as 'admin' | 'leader' | 'member')}
-                  className="w-full px-4 py-2 border border-brand-dark/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50 bg-white"
+                  className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50 bg-white"
                 >
                   <option value="member">Team Member</option>
                   <option value="leader">Leader</option>
@@ -332,7 +343,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
               type="text" 
               value={username} 
               onChange={e => { setUsername(e.target.value); setError(''); }} 
-              className="w-full px-4 py-2 border border-brand-dark/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
+              className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
               placeholder="e.g. admin" 
             />
           </div>
@@ -342,7 +353,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
               type="password" 
               value={password} 
               onChange={e => { setPassword(e.target.value); setError(''); }} 
-              className="w-full px-4 py-2 border border-brand-dark/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
+              className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
               placeholder="•••••••• (min 6 chars)" 
             />
           </div>
@@ -356,7 +367,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
           <button 
             type="button"
             onClick={() => { setIsLogin(!isLogin); setError(''); setUsername(''); setPassword(''); setName(''); setRole('member'); }}
-            className="text-sm text-brand-dark/60 hover:text-brand-dark font-medium transition-colors"
+            className="text-sm text-brand-dark/80 hover:text-brand-dark font-medium transition-colors"
           >
             {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
           </button>
@@ -364,7 +375,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
         
         <div className="mt-6 flex items-center justify-center gap-4">
           <div className="h-px bg-brand-dark/10 flex-1"></div>
-          <span className="text-xs text-brand-dark/40 font-medium uppercase">Or continue with</span>
+          <span className="text-xs text-brand-secondary font-medium uppercase">Or continue with</span>
           <div className="h-px bg-brand-dark/10 flex-1"></div>
         </div>
 
@@ -372,20 +383,20 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
           type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="mt-6 w-full py-2.5 bg-white border border-brand-dark/20 text-brand-dark rounded-lg font-medium hover:bg-brand-dark/5 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+          className="mt-6 w-full py-2.5 bg-white border border-brand-secondary/50 text-brand-dark rounded-lg font-medium hover:bg-brand-muted/15 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
         >
           Google
         </button>
 
         {isLogin && (
-          <div className="mt-8 p-4 bg-brand-dark/5 rounded-lg text-sm text-brand-dark/70 border border-brand-dark/10">
+          <div className="mt-8 p-4 bg-brand-muted/15 rounded-lg text-sm text-brand-dark/70 border border-brand-secondary/30">
             <p className="font-bold mb-2 text-brand-dark">Test Accounts (Please Sign Up first):</p>
             <ul className="space-y-2">
-              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> Create <strong>admin</strong> (Role: Admin)</li>
-              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> Create <strong>leader</strong> (Role: Leader)</li>
-              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> Create <strong>member1</strong> (Role: Team Member)</li>
+              <li className="flex items-center gap-2"><User size={14} className="text-brand-secondary" /> Create <strong>admin</strong> (Role: Admin)</li>
+              <li className="flex items-center gap-2"><User size={14} className="text-brand-secondary" /> Create <strong>leader</strong> (Role: Leader)</li>
+              <li className="flex items-center gap-2"><User size={14} className="text-brand-secondary" /> Create <strong>member1</strong> (Role: Team Member)</li>
             </ul>
-            <p className="mt-3 text-xs text-brand-dark/50 italic">
+            <p className="mt-3 text-xs text-brand-secondary italic">
               * Since we are using a real database now, you must create these accounts via "Sign Up" before logging in.
             </p>
           </div>
@@ -427,13 +438,13 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
 
   return (
     <div className="min-h-screen flex font-sans bg-brand-light text-brand-dark relative">
-      <aside className="w-64 bg-white border-r border-brand-dark/10 flex flex-col">
-        <div className="p-6 flex items-center gap-3 border-b border-brand-dark/10">
+      <aside className="w-64 bg-white border-r border-brand-secondary/30 flex flex-col">
+        <div className="p-6 flex items-center gap-3 border-b border-brand-secondary/30">
           <div className="w-10 h-10 rounded-xl bg-brand-dark text-brand-light flex items-center justify-center font-bold text-xl shadow-sm">T</div>
           <h1 className="font-bold text-xl tracking-tight text-brand-dark">Admin</h1>
         </div>
         <div className="flex-1 p-4">
-          <div className="px-4 py-3 bg-brand-dark/5 rounded-xl font-medium flex items-center gap-3 text-brand-dark">
+          <div className="px-4 py-3 bg-brand-muted/15 rounded-xl font-medium flex items-center gap-3 text-brand-dark">
             <User size={20} /> User Management
           </div>
         </div>
@@ -447,7 +458,7 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
         </div>
       </aside>
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-20 bg-white border-b border-brand-dark/10 flex items-center justify-between px-8 shrink-0">
+        <header className="h-20 bg-white border-b border-brand-secondary/30 flex items-center justify-between px-8 shrink-0">
           <h2 className="text-xl font-bold">User Management</h2>
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium">{currentUser.name}</span>
@@ -457,27 +468,27 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
           </div>
         </header>
         <div className="flex-1 overflow-auto p-8">
-          <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
             <table className="w-full text-left text-sm">
-              <thead className="bg-brand-dark/5 border-b border-brand-dark/10">
+              <thead className="bg-brand-muted/15 border-b border-brand-secondary/30">
                 <tr>
-                  <th className="px-6 py-4 font-medium text-brand-dark/60">Name</th>
-                  <th className="px-6 py-4 font-medium text-brand-dark/60">Username</th>
-                  <th className="px-6 py-4 font-medium text-brand-dark/60">Role</th>
-                  <th className="px-6 py-4 font-medium text-brand-dark/60 text-right">Actions</th>
+                  <th className="px-6 py-4 font-medium text-brand-dark/80">Name</th>
+                  <th className="px-6 py-4 font-medium text-brand-dark/80">Username</th>
+                  <th className="px-6 py-4 font-medium text-brand-dark/80">Role</th>
+                  <th className="px-6 py-4 font-medium text-brand-dark/80 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-dark/10">
                 {users.map(user => (
-                  <tr key={user.id} className="hover:bg-brand-dark/5 transition-colors">
+                  <tr key={user.id} className="hover:bg-brand-muted/15 transition-colors">
                     <td className="px-6 py-4 font-medium">{user.name}</td>
-                    <td className="px-6 py-4 text-brand-dark/60">{user.username}</td>
+                    <td className="px-6 py-4 text-brand-dark/80">{user.username}</td>
                     <td className="px-6 py-4">
                       <select 
                         value={user.role} 
                         onChange={(e) => handleRoleChange(user.id, e.target.value as any)}
                         disabled={user.id === currentUser.id}
-                        className="bg-transparent border border-brand-dark/20 rounded px-2 py-1 focus:outline-none focus:border-brand-dark"
+                        className="bg-transparent border border-brand-secondary/50 rounded px-2 py-1 focus:outline-none focus:border-brand-dark"
                       >
                         <option value="admin">Admin</option>
                         <option value="leader">Leader</option>
@@ -509,7 +520,7 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-brand-dark/10"
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-brand-secondary/30"
             >
               <h3 className="text-lg font-bold text-brand-dark mb-2">Delete User</h3>
               <p className="text-brand-dark/70 text-sm mb-4">
@@ -519,7 +530,7 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
                 type="text" 
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value)}
-                className="w-full px-4 py-2 border border-brand-dark/20 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-red-500/50"
                 placeholder={userToDelete.username}
               />
               <div className="flex justify-end gap-3">
@@ -711,42 +722,42 @@ export default function App() {
         <nav className="flex-1 px-4 py-6 space-y-2">
           <button 
             onClick={() => { setActiveTab('dashboard'); setSelectedProjectId(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard' && !selectedProject ? 'bg-brand-light/10 font-medium' : 'hover:bg-brand-light/5 opacity-80 hover:opacity-100'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <LayoutDashboard size={20} />
             Dashboard
           </button>
           <button 
             onClick={() => { setActiveTab('projects'); setSelectedProjectId(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${(activeTab === 'projects' || selectedProject) ? 'bg-brand-light/10 font-medium' : 'hover:bg-brand-light/5 opacity-80 hover:opacity-100'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${(activeTab === 'projects' || selectedProject) ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <FolderKanban size={20} />
             Projects
           </button>
           <button 
             onClick={() => { setActiveTab('transportation'); setSelectedProjectId(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'transportation' && !selectedProject ? 'bg-brand-light/10 font-medium' : 'hover:bg-brand-light/5 opacity-80 hover:opacity-100'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'transportation' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <Truck size={20} />
             Transportation
           </button>
           <button 
             onClick={() => { setActiveTab('installation'); setSelectedProjectId(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'installation' && !selectedProject ? 'bg-brand-light/10 font-medium' : 'hover:bg-brand-light/5 opacity-80 hover:opacity-100'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'installation' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <Wrench size={20} />
             Installation
           </button>
           <button 
             onClick={() => { setActiveTab('payments'); setSelectedProjectId(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'payments' && !selectedProject ? 'bg-brand-light/10 font-medium' : 'hover:bg-brand-light/5 opacity-80 hover:opacity-100'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'payments' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <CreditCard size={20} />
             Payments
           </button>
           <button 
             onClick={() => { setActiveTab('sop'); setSelectedProjectId(null); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'sop' && !selectedProject ? 'bg-brand-light/10 font-medium' : 'hover:bg-brand-light/5 opacity-80 hover:opacity-100'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'sop' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <BookOpen size={20} />
             SOP Manual
@@ -754,7 +765,7 @@ export default function App() {
         </nav>
 
         <div className="p-4 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-brand-light/5 opacity-80 hover:opacity-100 transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-brand-muted/20 opacity-80 hover:opacity-100 transition-colors">
             <Settings size={20} />
             Settings
           </button>
@@ -771,16 +782,16 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-brand-light/50 backdrop-blur-md border-b border-brand-dark/10 flex items-center justify-between px-8 shrink-0 z-10">
-          <div className="flex items-center gap-3 text-brand-dark/80 font-medium bg-white/50 px-4 py-2 rounded-lg border border-brand-dark/10">
-            <Calendar size={18} className="text-brand-dark/50" />
+        <header className="h-16 bg-brand-light/50 backdrop-blur-md border-b border-brand-secondary/30 flex items-center justify-between px-8 shrink-0 z-10">
+          <div className="flex items-center gap-3 text-brand-dark/80 font-medium bg-white/50 px-4 py-2 rounded-lg border border-brand-secondary/30">
+            <Calendar size={18} className="text-brand-secondary" />
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
           <div className="flex items-center gap-4">
             <button onClick={handleAddProject} className="flex items-center gap-2 px-4 py-2 bg-brand-dark text-brand-light rounded-lg font-medium text-sm hover:bg-brand-dark/90 transition-colors shadow-sm">
               <Plus size={16} /> New Project
             </button>
-            <button className="p-2 rounded-full hover:bg-brand-dark/5 relative text-brand-dark/70">
+            <button className="p-2 rounded-full hover:bg-brand-muted/15 relative text-brand-dark/70">
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-brand-light"></span>
             </button>
@@ -794,24 +805,24 @@ export default function App() {
         <div className="flex-1 overflow-auto px-4 sm:px-8 pb-8">
           <div className="pt-8">
             {!selectedProject && (
-              <div className="w-full mx-auto mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-xl shadow-sm border border-brand-dark/10">
-              <div className="flex items-center gap-2 text-brand-dark/60 font-medium text-sm">
+              <div className="w-full mx-auto mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-xl shadow-sm border border-brand-secondary/30">
+              <div className="flex items-center gap-2 text-brand-dark/80 font-medium text-sm">
                 <Filter size={16} /> Filters:
               </div>
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-dark/40" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" />
                 <input 
                   type="text" 
                   placeholder="Search project name or SO#..." 
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-3 py-1.5 w-64 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark placeholder:text-brand-dark/40"
+                  className="pl-9 pr-3 py-1.5 w-64 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark placeholder:text-brand-secondary"
                 />
               </div>
               <select 
                 value={filterCustomer} 
                 onChange={e => setFilterCustomer(e.target.value)}
-                className="px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
               >
                 <option value="">All Customers</option>
                 {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
@@ -822,7 +833,7 @@ export default function App() {
                     <select 
                       value={filterContractor} 
                       onChange={e => setFilterContractor(e.target.value)}
-                      className="px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                      className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
                     >
                       <option value="">All Installation Contractors</option>
                       {uniqueContractors.map(c => <option key={c} value={c}>{c}</option>)}
@@ -831,7 +842,7 @@ export default function App() {
                     <select 
                       value={filterCarrier} 
                       onChange={e => setFilterCarrier(e.target.value)}
-                      className="px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                      className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
                     >
                       <option value="">All Transportation Vendors</option>
                       {uniqueCarriers.map(c => <option key={c} value={c}>{c}</option>)}
@@ -842,7 +853,7 @@ export default function App() {
               {(searchQuery || filterCustomer || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
                 <button 
                   onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterCarrier(''); setFilterContractor(''); }}
-                  className="text-xs font-medium text-brand-dark/50 hover:text-brand-dark"
+                  className="text-xs font-medium text-brand-secondary hover:text-brand-dark"
                 >
                   Clear Filters
                 </button>
@@ -943,7 +954,7 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
     >
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
-        <p className="text-brand-dark/60 mt-1">Top 10 projects with the closest upcoming events.</p>
+        <p className="text-brand-dark/80 mt-1">Top 10 projects with the closest upcoming events.</p>
       </div>
       
       <div className="flex flex-col gap-4">
@@ -951,16 +962,16 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
           <div 
             key={project.id} 
             onClick={() => onSelectProject(project)}
-            className="bg-white rounded-2xl p-5 shadow-sm border border-brand-dark/10 cursor-pointer hover:shadow-md hover:border-brand-dark/30 transition-all group flex flex-col md:flex-row md:items-center justify-between gap-6"
+            className="bg-white rounded-2xl p-5 shadow-sm border border-brand-secondary/30 cursor-pointer hover:shadow-md hover:border-brand-dark/30 transition-all group flex flex-col md:flex-row md:items-center justify-between gap-6"
           >
             <div className="flex items-center gap-6 flex-1">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-brand-dark/5 flex items-center justify-center text-brand-dark/50 font-bold text-lg">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-brand-muted/15 flex items-center justify-center text-brand-secondary font-bold text-lg">
                 {index + 1}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   {project.unitType && (
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-dark/10 text-brand-dark border border-brand-dark/20 inline-block">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-brand-dark/10 text-brand-dark border border-brand-secondary/50 inline-block">
                       {project.unitType}
                     </span>
                   )}
@@ -969,37 +980,37 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
                   </span>
                 </div>
                 <h4 className="font-bold text-lg leading-tight group-hover:text-brand-dark/80 transition-colors truncate">{project.name}</h4>
-                <p className="text-sm text-brand-dark/60 truncate">{project.customer} • {project.destination}</p>
+                <p className="text-sm text-brand-dark/80 truncate">{project.customer} • {project.destination}</p>
               </div>
             </div>
             
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-12 w-full md:w-auto">
               {/* Stage Info */}
               <div className="flex flex-col gap-1 min-w-[150px]">
-                <span className="text-xs font-bold text-brand-dark/40 uppercase tracking-wider">Current Stage</span>
+                <span className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Current Stage</span>
                 <span className="font-semibold text-brand-dark">{project.currentStage}</span>
               </div>
               
               {/* Date Info */}
               {closestDate ? (
                 <div className="flex flex-col gap-1 min-w-[200px]">
-                  <span className="text-xs font-bold text-brand-dark/40 uppercase tracking-wider">Next Milestone</span>
+                  <span className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Next Milestone</span>
                   <div className="flex items-center gap-2">
-                    <Calendar size={14} className={closestDate.isFuture ? "text-emerald-600" : "text-brand-dark/40"} />
+                    <Calendar size={14} className={closestDate.isFuture ? "text-emerald-600" : "text-brand-secondary"} />
                     <span className="text-sm font-medium text-brand-dark/70">{closestDate.label}</span>
                   </div>
-                  <span className={`font-bold ${closestDate.isFuture ? "text-emerald-600" : "text-brand-dark/50"}`}>
+                  <span className={`font-bold ${closestDate.isFuture ? "text-emerald-600" : "text-brand-secondary"}`}>
                     {closestDate.dateStr}
                   </span>
                 </div>
               ) : (
                 <div className="flex flex-col gap-1 min-w-[200px]">
-                  <span className="text-xs font-bold text-brand-dark/40 uppercase tracking-wider">Next Milestone</span>
-                  <span className="text-sm font-medium text-brand-dark/40">No upcoming dates</span>
+                  <span className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Next Milestone</span>
+                  <span className="text-sm font-medium text-brand-secondary">No upcoming dates</span>
                 </div>
               )}
               
-              <button className="text-brand-dark/40 hover:text-brand-dark hidden md:block">
+              <button className="text-brand-secondary hover:text-brand-dark hidden md:block">
                 <ChevronRight size={20} />
               </button>
             </div>
@@ -1020,7 +1031,7 @@ function EditableText({ isEditing, value, onChange, className = "", placeholder 
         type="text" 
         value={value} 
         onChange={e => onChange(e.target.value)} 
-        className={`w-full px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`} 
+        className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`} 
         placeholder={placeholder}
         list={list.length > 0 ? id : undefined}
       />
@@ -1040,7 +1051,7 @@ function EditableDate({ isEditing, value, onChange, className = "" }: any) {
       type="date" 
       value={value === '-' ? '' : value} 
       onChange={e => onChange(e.target.value || '-')} 
-      className={`w-full px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`} 
+      className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`} 
     />
   );
 }
@@ -1052,11 +1063,11 @@ function EditableSelect({ isEditing, value, options, onChange, className = "" }:
       <select 
         value={value} 
         onChange={e => onChange(e.target.value)} 
-        className={`w-full px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all appearance-none pr-8 ${className}`}
+        className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all appearance-none pr-8 ${className}`}
       >
         {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
       </select>
-      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-dark/40 pointer-events-none" />
+      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-secondary pointer-events-none" />
     </div>
   );
 }
@@ -1096,9 +1107,9 @@ function EditableCombobox({ isEditing, value, options, onChange, placeholder = "
         }}
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder}
-        className={`w-full px-3 py-1.5 bg-brand-dark/5 border border-brand-dark/10 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all pr-8 ${className}`}
+        className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all pr-8 ${className}`}
       />
-      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-dark/40 pointer-events-none" />
+      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-secondary pointer-events-none" />
       <AnimatePresence>
         {isOpen && filteredOptions.length > 0 && (
           <motion.div 
@@ -1106,12 +1117,12 @@ function EditableCombobox({ isEditing, value, options, onChange, placeholder = "
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-1 bg-white border border-brand-dark/10 rounded-lg shadow-lg max-h-48 overflow-y-auto py-1"
+            className="absolute z-50 w-full mt-1 bg-white border border-brand-secondary/30 rounded-lg shadow-lg max-h-48 overflow-y-auto py-1"
           >
             {filteredOptions.map((opt: string) => (
               <div
                 key={opt}
-                className="px-3 py-2 text-sm text-brand-dark hover:bg-brand-dark/5 cursor-pointer"
+                className="px-3 py-2 text-sm text-brand-dark hover:bg-brand-muted/15 cursor-pointer"
                 onClick={() => {
                   setInputValue(opt);
                   onChange(opt);
@@ -1202,11 +1213,11 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
       {/* Header */}
       <button 
         onClick={onBack}
-        className="w-fit flex items-center gap-2 text-sm font-medium text-brand-dark/50 hover:text-brand-dark hover:bg-brand-dark/5 px-3 py-1.5 -ml-3 -mb-2 rounded-lg transition-colors"
+        className="w-fit flex items-center gap-2 text-sm font-medium text-brand-secondary hover:text-brand-dark hover:bg-brand-muted/15 px-3 py-1.5 -ml-3 -mb-2 rounded-lg transition-colors"
       >
         <ArrowLeft size={16} /> Back to Projects
       </button>
-      <div className="bg-white rounded-xl p-6 md:p-8 shadow-md border border-brand-dark/10 flex flex-col lg:flex-row lg:items-start justify-between gap-6 sticky top-0 z-40">
+      <div className="bg-white rounded-xl p-6 md:p-8 shadow-md border border-brand-secondary/30 flex flex-col lg:flex-row lg:items-start justify-between gap-6 sticky top-0 z-40">
           <div className="flex-1 w-full min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
               <div className="flex-1 min-w-0">
@@ -1221,7 +1232,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                   <select
                     value={editData.unitType || ''}
                     onChange={e => updateField(['unitType'], e.target.value)}
-                    className="text-sm font-bold px-3 py-1.5 rounded-lg bg-brand-dark/10 text-brand-dark border border-brand-dark/20 focus:outline-none focus:ring-2 focus:ring-brand-dark/50"
+                    className="text-sm font-bold px-3 py-1.5 rounded-lg bg-brand-dark/10 text-brand-dark border border-brand-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-dark/50"
                   >
                     <option value="">Unit Type</option>
                     <option value="HDE">HDE</option>
@@ -1237,7 +1248,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               ) : (
                 <div className="flex gap-2">
                   {project.unitType && (
-                    <span className="text-sm font-bold px-3 py-1.5 rounded-lg bg-brand-dark/10 text-brand-dark border border-brand-dark/20 shrink-0 w-fit">
+                    <span className="text-sm font-bold px-3 py-1.5 rounded-lg bg-brand-dark/10 text-brand-dark border border-brand-secondary/50 shrink-0 w-fit">
                       {project.unitType}
                     </span>
                   )}
@@ -1247,7 +1258,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                 </div>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 text-brand-dark/60 text-[15px] mb-5">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 text-brand-dark/80 text-[15px] mb-5">
               <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-[180px]">
                 <EditableCombobox isEditing={isEditing} value={editData.customer} onChange={(v: string) => updateField(['customer'], v)} placeholder="Customer" options={allCustomers} />
               </div>
@@ -1259,14 +1270,14 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                     <select 
                       value={editData.assignedTo || ''} 
                       onChange={e => updateField(['assignedTo'], e.target.value || null)}
-                      className="bg-brand-dark/5 border border-brand-dark/10 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-dark/30 w-full text-[15px] text-brand-dark appearance-none pr-8"
+                      className="bg-brand-muted/15 border border-brand-secondary/30 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-dark/30 w-full text-[15px] text-brand-dark appearance-none pr-8"
                     >
                       <option value="">Unassigned</option>
                       {users.filter(u => u.role === 'member').map(u => (
                         <option key={u.id} value={u.id}>{u.name}</option>
                       ))}
                     </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-dark/40 pointer-events-none" />
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-secondary pointer-events-none" />
                   </div>
                 ) : (
                   <span className="truncate">{users.find(u => u.id === project.assignedTo)?.name || 'Unassigned'}</span>
@@ -1274,15 +1285,15 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-dark/10 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
-                <Factory size={16} className="text-brand-dark/40 shrink-0" />
+              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
+                <Factory size={16} className="text-brand-secondary shrink-0" />
                 <span className="shrink-0">SERIAL#:</span> 
                 <div className="flex-1 min-w-0">
                   <EditableText isEditing={isEditing} value={editData.serialNumber} onChange={(v: string) => updateField(['serialNumber'], v)} className="text-brand-dark font-bold w-full" />
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-dark/10 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
-                <FileText size={16} className="text-brand-dark/40 shrink-0" />
+              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
+                <FileText size={16} className="text-brand-secondary shrink-0" />
                 <span className="shrink-0">DRAWING#:</span> 
                 <div className="flex-1 min-w-0">
                   <EditableText isEditing={isEditing} value={editData.drawingNumber} onChange={(v: string) => updateField(['drawingNumber'], v)} className="text-brand-dark font-bold w-full" />
@@ -1294,7 +1305,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
         <div className="flex flex-row flex-wrap items-center gap-3 shrink-0">
           {isEditing ? (
             <>
-              <button onClick={handleCancel} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-dark/20 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-dark/5 transition-colors shadow-sm">
+              <button onClick={handleCancel} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 transition-colors shadow-sm">
                 <X size={16} /> Cancel
               </button>
               <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-brand-dark text-brand-light rounded-lg font-medium text-sm hover:bg-brand-dark/90 transition-colors shadow-sm">
@@ -1306,7 +1317,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg font-medium text-sm hover:bg-red-100 transition-colors shadow-sm">
                 <Trash2 size={16} /> Delete
               </button>
-              <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-dark/20 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-dark/5 transition-colors shadow-sm">
+              <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 transition-colors shadow-sm">
                 <Edit3 size={16} /> Edit
               </button>
             </>
@@ -1315,10 +1326,10 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
       </div>
 
       {/* Progress Stepper */}
-      <div className="bg-white rounded-xl p-6 md:p-8 shadow-sm border border-brand-dark/10 relative overflow-hidden flex flex-col gap-8">
+      <div className="bg-white rounded-xl p-6 md:p-8 shadow-sm border border-brand-secondary/30 relative overflow-hidden flex flex-col gap-8">
         {isEditing && (
           <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 text-sm z-20">
-            <span className="font-medium text-brand-dark/60">Current Stage:</span>
+            <span className="font-medium text-brand-dark/80">Current Stage:</span>
             <div className="w-full sm:w-64">
               <EditableSelect isEditing={isEditing} value={editData.currentStage} options={stageOptions} onChange={(v: Stage) => updateField(['currentStage'], v)} className="font-bold" />
             </div>
@@ -1341,21 +1352,21 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
         {/* Left Column - Details */}
         <div className="flex-1 flex flex-col gap-6">
           {/* Tabs */}
-          <div className="flex border-b border-brand-dark/10">
+          <div className="flex border-b border-brand-secondary/30">
             <button 
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-dark/50 hover:text-brand-dark'}`}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
               onClick={() => setActiveTab('overview')}
             >
               Overview
             </button>
             <button 
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'tasks' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-dark/50 hover:text-brand-dark'}`}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'tasks' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
               onClick={() => setActiveTab('tasks')}
             >
               Tasks
             </button>
             <button 
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'logs' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-dark/50 hover:text-brand-dark'}`}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'logs' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
               onClick={() => setActiveTab('logs')}
             >
               Logs
@@ -1373,15 +1384,15 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               </div>
 
               {/* Ocean Transportation */}
-              <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
-                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-dark/5 gap-4">
+              <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
+                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
                   <div className="flex items-center gap-2 font-bold text-brand-dark">
                     <Ship size={18} className="text-brand-dark" />
                     Ocean Transportation
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/60">
-                    <div className="flex items-center gap-2">FOB Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.fobDate} onChange={(v: string) => updateField(['oceanFreight', 'fobDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-dark/10" /></div>
-                    <div className="flex items-center gap-2">CIF Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.cifDate} onChange={(v: string) => updateField(['oceanFreight', 'cifDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-dark/10" /></div>
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/80">
+                    <div className="flex items-center gap-2">FOB Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.fobDate} onChange={(v: string) => updateField(['oceanFreight', 'fobDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
+                    <div className="flex items-center gap-2">CIF Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.cifDate} onChange={(v: string) => updateField(['oceanFreight', 'cifDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
                   </div>
                 </div>
                 <div className="p-6">
@@ -1392,14 +1403,14 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                     <DateItem label="Act. Arrival (ATA)" value={editData.oceanFreight.ata} highlight isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'ata'], v)} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 text-xs font-bold text-brand-dark/50 mb-3 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-xs font-bold text-brand-secondary mb-3 uppercase tracking-wider">
                       <FileText size={14} /> Documents Received
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {editData.oceanFreight.documents.map((doc, idx) => (
                         <React.Fragment key={doc.name}>
                           {isEditing ? (
-                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-brand-dark/5 text-brand-dark/60 border-brand-dark/20'}`}>
+                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-brand-muted/15 text-brand-dark/80 border-brand-secondary/50'}`}>
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input 
                                   type="checkbox" 
@@ -1421,11 +1432,11 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                                   newDocs[idx].date = e.target.value;
                                   updateField(['oceanFreight', 'documents'], newDocs);
                                 }}
-                                className={`ml-2 px-1 py-0.5 rounded text-xs focus:outline-none focus:ring-1 w-28 ${doc.received ? 'bg-brand-light/20 text-brand-light focus:ring-brand-light' : 'bg-white text-brand-dark focus:ring-brand-dark/30 border border-brand-dark/20'}`}
+                                className={`ml-2 px-1 py-0.5 rounded text-xs focus:outline-none focus:ring-1 w-28 ${doc.received ? 'bg-brand-light/20 text-brand-light focus:ring-brand-light' : 'bg-white text-brand-dark focus:ring-brand-dark/30 border border-brand-secondary/50'}`}
                               />
                             </div>
                           ) : (
-                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-white text-brand-dark/40 border-brand-dark/20'}`}>
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-white text-brand-secondary border-brand-secondary/50'}`}>
                               <div className={`w-1.5 h-1.5 rounded-full ${doc.received ? 'bg-brand-light' : 'bg-brand-dark/20'}`} />
                               {doc.name}
                               {doc.date && <span className="ml-1 opacity-70 text-xs">({doc.date})</span>}
@@ -1439,24 +1450,24 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               </div>
 
               {/* Inland Transportation */}
-              <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
-                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-dark/5 gap-4">
+              <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
+                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
                   <div className="flex items-center gap-2 font-bold text-brand-dark">
                     <Truck size={18} className="text-brand-dark" />
                     Inland Transportation
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-brand-dark/60">
-                    <div className="flex items-center gap-2">DDP Date: <EditableDate isEditing={isEditing} value={editData.inlandTransport.ddpDate} onChange={(v: string) => updateField(['inlandTransport', 'ddpDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-dark/10" /></div>
+                  <div className="flex items-center gap-4 text-xs text-brand-dark/80">
+                    <div className="flex items-center gap-2">DDP Date: <EditableDate isEditing={isEditing} value={editData.inlandTransport.ddpDate} onChange={(v: string) => updateField(['inlandTransport', 'ddpDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
                   </div>
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <div className="text-xs text-brand-dark/50 mb-1">Transportation Vendor</div>
+                      <div className="text-xs text-brand-secondary mb-1">Transportation Vendor</div>
                       <EditableText isEditing={isEditing} value={editData.inlandTransport.carrier} onChange={(v: string) => updateField(['inlandTransport', 'carrier'], v)} className="font-medium text-brand-dark" />
                     </div>
                     <div>
-                      <div className="text-xs text-brand-dark/50 mb-1">Discharging Method</div>
+                      <div className="text-xs text-brand-secondary mb-1">Discharging Method</div>
                       <EditableSelect isEditing={isEditing} value={editData.inlandTransport.dischargingMethod} options={['Rail', 'Trailer', 'Barge']} onChange={(v: string) => updateField(['inlandTransport', 'dischargingMethod'], v)} className="font-medium text-brand-dark" />
                     </div>
                   </div>
@@ -1468,19 +1479,19 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                   </div>
                   <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-brand-dark/5">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="text-brand-dark/60">Site Visit:</span>
-                      <EditableDate isEditing={isEditing} value={editData.inlandTransport.siteVisit} onChange={(v: string) => updateField(['inlandTransport', 'siteVisit'], v)} className="font-medium text-brand-dark bg-brand-dark/5 px-2 py-1 rounded border border-brand-dark/10" />
+                      <span className="text-brand-dark/80">Site Visit:</span>
+                      <EditableDate isEditing={isEditing} value={editData.inlandTransport.siteVisit} onChange={(v: string) => updateField(['inlandTransport', 'siteVisit'], v)} className="font-medium text-brand-dark bg-brand-muted/15 px-2 py-1 rounded border border-brand-secondary/30" />
                     </div>
                     <CheckboxItem label="Road Permit" checked={editData.inlandTransport.roadPermit} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'roadPermit'], v)} />
                     <CheckboxItem label="POD Received" checked={editData.inlandTransport.podReceived} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'podReceived'], v)} />
                   </div>
                   <div className="pt-4 mt-4 border-t border-brand-dark/5">
-                    <div className="text-xs text-brand-dark/50 mb-1">Site Contact</div>
+                    <div className="text-xs text-brand-secondary mb-1">Site Contact</div>
                     {isEditing ? (
                       <textarea 
                         value={editData.inlandTransport.siteContact || ''}
                         onChange={(e) => updateField(['inlandTransport', 'siteContact'], e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-brand-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
+                        className="w-full px-3 py-2 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
                         placeholder="Enter site contact details (multiple contacts allowed)..."
                       />
                     ) : (
@@ -1493,41 +1504,41 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               </div>
 
               {/* Installation & Assembly */}
-              <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
-                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-dark/5 gap-4">
+              <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
+                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
                   <div className="flex items-center gap-2 font-bold text-brand-dark">
                     <Wrench size={18} className="text-brand-dark" />
                     Installation & Assembly
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/60">
-                    <div className="flex items-center gap-2">Start: <EditableDate isEditing={isEditing} value={editData.installation.startDate} onChange={(v: string) => updateField(['installation', 'startDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-dark/10" /></div>
-                    <div className="flex items-center gap-2">End: <EditableDate isEditing={isEditing} value={editData.installation.endDate} onChange={(v: string) => updateField(['installation', 'endDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-dark/10" /></div>
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/80">
+                    <div className="flex items-center gap-2">Start: <EditableDate isEditing={isEditing} value={editData.installation.startDate} onChange={(v: string) => updateField(['installation', 'startDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
+                    <div className="flex items-center gap-2">End: <EditableDate isEditing={isEditing} value={editData.installation.endDate} onChange={(v: string) => updateField(['installation', 'endDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
                   </div>
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <div className="text-xs text-brand-dark/50 mb-1">Installation Vendor</div>
+                      <div className="text-xs text-brand-secondary mb-1">Installation Vendor</div>
                       <EditableText isEditing={isEditing} value={editData.installation.contractor} onChange={(v: string) => updateField(['installation', 'contractor'], v)} className="font-medium text-brand-dark" />
                     </div>
                     <div>
-                      <div className="text-xs text-brand-dark/50 mb-1 flex items-center gap-1"><Activity size={12}/> Supervisor</div>
+                      <div className="text-xs text-brand-secondary mb-1 flex items-center gap-1"><Activity size={12}/> Supervisor</div>
                       <EditableText isEditing={isEditing} value={editData.installation.supervisor} onChange={(v: string) => updateField(['installation', 'supervisor'], v)} className="font-medium text-brand-dark" />
                     </div>
                   </div>
                   
                   <div className="pt-4 border-t border-brand-dark/5">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="text-xs font-bold text-brand-dark/50 uppercase tracking-wider">Oil Delivery Schedule</div>
-                      <div className="text-xs text-brand-dark/60 flex items-center gap-2">
+                      <div className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Oil Delivery Schedule</div>
+                      <div className="text-xs text-brand-dark/80 flex items-center gap-2">
                         Total Req: <EditableText isEditing={isEditing} value={editData.installation.oilTotalReq} onChange={(v: string) => updateField(['installation', 'oilTotalReq'], v)} className="font-bold text-brand-dark w-24" />
                       </div>
                     </div>
                     <div className="space-y-2 mb-4">
                       {editData.installation.oilDeliveries.map((delivery, i) => (
-                        <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-brand-dark/5 rounded-lg border border-brand-dark/5 text-sm gap-2">
+                        <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-brand-muted/15 rounded-lg border border-brand-dark/5 text-sm gap-2">
                           <div className="font-medium text-brand-dark/80 w-24 shrink-0">{getDeliveryLabel(i)}</div>
-                          <div className="flex items-center gap-4 text-brand-dark/60">
+                          <div className="flex items-center gap-4 text-brand-dark/80">
                             <span className="flex items-center gap-1">
                               <Calendar size={14}/> 
                               <EditableDate isEditing={isEditing} value={delivery.date} onChange={(v: string) => {
@@ -1564,7 +1575,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                             const newDel = [...editData.installation.oilDeliveries, { name: '', date: '-', time: '00:00' }];
                             updateField(['installation', 'oilDeliveries'], newDel);
                           }}
-                          className="w-full py-2 border border-dashed border-brand-dark/30 rounded-lg text-brand-dark/60 hover:text-brand-dark hover:border-brand-dark/50 flex items-center justify-center gap-2 text-sm transition-colors"
+                          className="w-full py-2 border border-dashed border-brand-dark/30 rounded-lg text-brand-dark/80 hover:text-brand-dark hover:border-brand-dark/50 flex items-center justify-center gap-2 text-sm transition-colors"
                         >
                           <Plus size={16} /> Add Delivery
                         </button>
@@ -1580,13 +1591,13 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
           )}
 
           {activeTab === 'tasks' && (
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-dark/10 text-center text-brand-dark/50">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-secondary/30 text-center text-brand-secondary">
               Tasks view is currently disabled.
             </div>
           )}
 
           {activeTab === 'logs' && (
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-dark/10 text-center text-brand-dark/50">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-secondary/30 text-center text-brand-secondary">
               Detailed logs view.
             </div>
           )}
@@ -1602,7 +1613,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-2xl p-6 shadow-xl max-w-md w-full border border-brand-dark/10"
+            className="bg-white rounded-2xl p-6 shadow-xl max-w-md w-full border border-brand-secondary/30"
           >
             <h3 className="text-xl font-bold text-brand-dark mb-2">Delete Project</h3>
             <p className="text-brand-dark/70 text-sm mb-6">
@@ -1613,7 +1624,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               value={deleteInput}
               onChange={(e) => setDeleteInput(e.target.value)}
               placeholder={project.id}
-              className="w-full px-4 py-2 mb-6 border border-brand-dark/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
+              className="w-full px-4 py-2 mb-6 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
             />
             <div className="flex justify-end gap-3">
               <button 
@@ -1621,7 +1632,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                   setShowDeleteConfirm(false);
                   setDeleteInput('');
                 }}
-                className="px-4 py-2 text-sm font-medium text-brand-dark hover:bg-brand-dark/5 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-brand-dark hover:bg-brand-muted/15 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -1664,16 +1675,16 @@ function StepIndicator({ title, icon: Icon, status, date }: { title: string, ico
       <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors ${
         status === 'completed' ? 'bg-brand-dark border-brand-dark text-brand-light' :
         status === 'active' ? 'bg-brand-light border-brand-dark text-brand-dark' :
-        'bg-white border-brand-dark/20 text-brand-dark/30'
+        'bg-white border-brand-secondary/50 text-brand-dark/30'
       }`}>
         {status === 'completed' ? <Check size={20} /> : <Icon size={20} />}
       </div>
       <div className="flex flex-col items-center gap-1">
-        <span className={`text-xs font-medium text-center ${status === 'active' ? 'text-brand-dark font-bold' : 'text-brand-dark/50'}`}>
+        <span className={`text-xs font-medium text-center ${status === 'active' ? 'text-brand-dark font-bold' : 'text-brand-secondary'}`}>
           {title}
         </span>
         {date && (
-          <span className="text-xs font-mono font-bold text-brand-dark bg-brand-dark/10 px-2 py-1 rounded-md shadow-sm border border-brand-dark/10">
+          <span className="text-xs font-mono font-bold text-brand-dark bg-brand-dark/10 px-2 py-1 rounded-md shadow-sm border border-brand-secondary/30">
             {date}
           </span>
         )}
@@ -1684,10 +1695,10 @@ function StepIndicator({ title, icon: Icon, status, date }: { title: string, ico
 
 function InfoCard({ label, value, icon: Icon, isEditing, onChange, type = "text" }: any) {
   return (
-    <div className="bg-white p-4 rounded-xl border border-brand-dark/10 shadow-sm flex flex-col gap-2">
-      <div className="text-xs font-bold text-brand-dark/40 uppercase tracking-wider">{label}</div>
+    <div className="bg-white p-4 rounded-xl border border-brand-secondary/30 shadow-sm flex flex-col gap-2">
+      <div className="text-xs font-bold text-brand-secondary uppercase tracking-wider">{label}</div>
       <div className="flex items-center gap-2 text-brand-dark font-medium text-[15px]">
-        <Icon size={16} className="text-brand-dark/40 shrink-0" />
+        <Icon size={16} className="text-brand-secondary shrink-0" />
         {type === 'date' ? (
           <EditableDate isEditing={isEditing} value={value} onChange={onChange} />
         ) : (
@@ -1701,7 +1712,7 @@ function InfoCard({ label, value, icon: Icon, isEditing, onChange, type = "text"
 function DateItem({ label, value, highlight = false, isEditing, onChange }: any) {
   return (
     <div>
-      <div className="text-xs text-brand-dark/50 mb-1">{label}</div>
+      <div className="text-xs text-brand-secondary mb-1">{label}</div>
       <div className={`font-medium text-[15px] ${highlight && value !== '-' && !isEditing ? 'text-brand-dark font-bold' : 'text-brand-dark'}`}>
         <EditableDate isEditing={isEditing} value={value} onChange={onChange} />
       </div>
@@ -1720,10 +1731,10 @@ function CheckboxItem({ label, checked, isEditing, onChange }: any) {
   }
   return (
     <div className="flex items-center gap-2 text-sm">
-      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${checked ? 'bg-brand-dark border-brand-dark text-brand-light' : 'border-brand-dark/20'}`}>
+      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${checked ? 'bg-brand-dark border-brand-dark text-brand-light' : 'border-brand-secondary/50'}`}>
         {checked && <Check size={10} strokeWidth={3} />}
       </div>
-      <span className={checked ? 'text-brand-dark' : 'text-brand-dark/50'}>{label}</span>
+      <span className={checked ? 'text-brand-dark' : 'text-brand-secondary'}>{label}</span>
     </div>
   );
 }
@@ -1732,12 +1743,12 @@ function ProjectList({ projects, onSelectProject }: { projects: Project[], onSel
   return (
     <div className="w-full mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-brand-dark">All Projects</h2>
-      <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
         {projects.map((p, index) => (
-          <div key={p.id} onClick={() => onSelectProject(p)} className="p-4 border-b border-brand-dark/5 hover:bg-brand-dark/5 cursor-pointer text-brand-dark flex items-center gap-4">
-            <span className="text-xs font-mono font-bold text-brand-dark/40 w-6">#{index + 1}</span>
+          <div key={p.id} onClick={() => onSelectProject(p)} className="p-4 border-b border-brand-dark/5 hover:bg-brand-muted/15 cursor-pointer text-brand-dark flex items-center gap-4">
+            <span className="text-xs font-mono font-bold text-brand-secondary w-6">#{index + 1}</span>
             {p.unitType && (
-              <span className="text-xs font-bold px-2 py-1 rounded bg-brand-dark/10 text-brand-dark border border-brand-dark/20 shrink-0 w-12 text-center">
+              <span className="text-xs font-bold px-2 py-1 rounded bg-brand-dark/10 text-brand-dark border border-brand-secondary/50 shrink-0 w-12 text-center">
                 {p.unitType}
               </span>
             )}
@@ -1745,7 +1756,7 @@ function ProjectList({ projects, onSelectProject }: { projects: Project[], onSel
               {p.id}
             </span>
             <span className="font-medium">{p.name}</span>
-            <span className="text-sm text-brand-dark/60 ml-auto">{p.customer}</span>
+            <span className="text-sm text-brand-dark/80 ml-auto">{p.customer}</span>
           </div>
         ))}
       </div>
@@ -1882,21 +1893,21 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
   const hqProgress = data?.totalCost ? Math.round((hqPaid / data.totalCost) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
       {/* Header Section */}
-      <div className="p-6 border-b border-brand-dark/10 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-brand-dark/5">
+      <div className="p-6 border-b border-brand-secondary/30 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-brand-muted/15">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0 shadow-sm border border-blue-100">
+          <div className="w-12 h-12 bg-brand-muted/15 rounded-xl flex items-center justify-center text-brand-dark shrink-0 shadow-sm border border-brand-secondary/30">
             <Building2 size={24} />
           </div>
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-brand-dark">{project.name}</h2>
             </div>
-            <div className="flex items-center gap-2 text-sm text-brand-dark/60 mt-1">
+            <div className="flex items-center gap-2 text-sm text-brand-dark/80 mt-1">
               <span className="font-medium text-brand-dark/80">{project.customer}</span>
               <span>•</span>
-              <span className="px-2 py-0.5 bg-white rounded border border-brand-dark/10 font-mono text-xs shadow-sm">
+              <span className="px-2 py-0.5 bg-white rounded border border-brand-secondary/30 font-mono text-xs shadow-sm">
                 # {project.id}
               </span>
             </div>
@@ -1904,15 +1915,15 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-brand-dark/60">
+          <div className="flex items-center gap-2 text-sm font-medium text-brand-dark/80">
             CURRENCY:
-            <select className="px-3 py-1.5 bg-white border border-brand-dark/20 rounded-lg text-brand-dark focus:outline-none shadow-sm">
+            <select className="px-3 py-1.5 bg-white border border-brand-secondary/50 rounded-lg text-brand-dark focus:outline-none shadow-sm">
               <option>USD ($)</option>
             </select>
           </div>
           {isEditing ? (
             <div className="flex items-center gap-2">
-              <button onClick={handleCancel} className="px-4 py-2 bg-white border border-brand-dark/20 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-dark/5 shadow-sm transition-colors">
+              <button onClick={handleCancel} className="px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 shadow-sm transition-colors">
                 Cancel
               </button>
               <button onClick={handleSave} className="px-4 py-2 bg-brand-dark text-brand-light rounded-lg font-medium text-sm hover:bg-brand-dark/90 shadow-sm transition-colors">
@@ -1920,7 +1931,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
               </button>
             </div>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-white border border-brand-dark/20 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-dark/5 flex items-center gap-2 shadow-sm transition-colors">
+            <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 flex items-center gap-2 shadow-sm transition-colors">
               <Edit3 size={16} /> Edit
             </button>
           )}
@@ -2007,8 +2018,8 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
             <CreditCard size={20} /> PAYMENT MILESTONES
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden">
-            <div className="flex items-center gap-4 p-4 border-b border-brand-dark/10 bg-brand-dark/5 text-xs font-bold text-brand-dark/60">
+          <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
+            <div className="flex items-center gap-4 p-4 border-b border-brand-secondary/30 bg-brand-muted/15 text-xs font-bold text-brand-dark/80">
               <div className="w-[60px] text-center shrink-0">DONE</div>
               <div className="flex-1">MILESTONE</div>
               <div className="w-[60px] text-center shrink-0">ACTION</div>
@@ -2021,20 +2032,20 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                     <div className="flex justify-center w-[60px] shrink-0">
                       <button 
                         onClick={() => isEditing ? updateMilestone(idx, 'isDone', !m.isDone) : quickUpdateStatus(idx, 'isDone', !m.isDone)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${m.isDone ? 'bg-emerald-50 border-emerald-500 text-emerald-500' : 'border-brand-dark/20 text-transparent hover:border-brand-dark/40'}`}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${m.isDone ? 'bg-emerald-50 border-emerald-500 text-emerald-500' : 'border-brand-secondary/50 text-transparent hover:border-brand-dark/40'}`}
                       >
                         <Check size={14} strokeWidth={3} />
                       </button>
                     </div>
                     
                     <div className="font-bold text-brand-dark flex-1 flex items-center gap-2">
-                      <span className="text-brand-dark/40">{idx + 1}.</span>
+                      <span className="text-brand-secondary">{idx + 1}.</span>
                       {isEditing ? (
                         <input 
                           type="text" 
                           value={m.name} 
                           onChange={e => updateMilestone(idx, 'name', e.target.value)}
-                          className="w-full max-w-md px-3 py-1.5 bg-white border-2 border-brand-dark/10 rounded-lg focus:outline-none focus:border-brand-dark/30 focus:ring-4 focus:ring-brand-dark/5 font-normal transition-all shadow-sm"
+                          className="w-full max-w-md px-3 py-1.5 bg-white border-2 border-brand-secondary/30 rounded-lg focus:outline-none focus:border-brand-dark/30 focus:ring-4 focus:ring-brand-dark/5 font-normal transition-all shadow-sm"
                         />
                       ) : (
                         <span className="text-lg">{m.name}</span>
@@ -2357,10 +2368,10 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
             </div>
             
             {isEditing && (
-              <div className="p-4 border-t border-brand-dark/10">
+              <div className="p-4 border-t border-brand-secondary/30">
                 <button 
                   onClick={addMilestone}
-                  className="w-full py-3 border-2 border-dashed border-brand-dark/20 rounded-lg text-brand-dark/50 font-medium hover:border-brand-dark/40 hover:text-brand-dark transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 border-2 border-dashed border-brand-secondary/50 rounded-lg text-brand-secondary font-medium hover:border-brand-dark/40 hover:text-brand-dark transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus size={18} /> Add New Milestone
                 </button>
@@ -2391,8 +2402,8 @@ function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUp
             />
           ))
         ) : (
-          <div className="flex items-center justify-center bg-white rounded-xl border border-brand-dark/10 min-h-[400px]">
-            <p className="text-brand-dark/50">No projects found.</p>
+          <div className="flex items-center justify-center bg-white rounded-xl border border-brand-secondary/30 min-h-[400px]">
+            <p className="text-brand-secondary">No projects found.</p>
           </div>
         )}
       </div>
@@ -2406,13 +2417,13 @@ function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProje
   return (
     <div className="flex flex-col gap-4">
       <h3 
-        className="text-lg font-bold text-brand-dark border-b border-brand-dark/10 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
+        className="text-lg font-bold text-brand-dark border-b border-brand-secondary/30 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
         onClick={() => setIsGroupExpanded(!isGroupExpanded)}
       >
-        <Truck size={18} className="text-brand-dark/40" />
+        <Truck size={18} className="text-brand-secondary" />
         {carrier}
-        <span className="text-sm font-normal text-brand-dark/50 bg-brand-dark/5 px-2 py-0.5 rounded-full ml-2">{projs.length}</span>
-        <ChevronDown size={18} className={`ml-auto text-brand-dark/40 transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
+        <span className="text-sm font-normal text-brand-secondary bg-brand-muted/15 px-2 py-0.5 rounded-full ml-2">{projs.length}</span>
+        <ChevronDown size={18} className={`ml-auto text-brand-secondary transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
       </h3>
       <AnimatePresence>
         {isGroupExpanded && (
@@ -2456,12 +2467,12 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
       className="w-full mx-auto flex flex-col gap-6 pb-12"
     >
       <h2 className="text-2xl font-bold mb-2 text-brand-dark flex items-center gap-2">
-        <Truck className="text-brand-dark/50" />
+        <Truck className="text-brand-secondary" />
         Transportation Overview
       </h2>
       
       {projects.length === 0 ? (
-        <div className="p-8 text-center text-brand-dark/50 bg-white rounded-xl border border-brand-dark/10">No projects found.</div>
+        <div className="p-8 text-center text-brand-secondary bg-white rounded-xl border border-brand-secondary/30">No projects found.</div>
       ) : (
         Object.entries(groupedProjects).map(([carrier, projs]) => (
           <CarrierGroup 
@@ -2513,34 +2524,34 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden transition-all">
+    <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden transition-all">
       <div 
-        className="p-4 flex items-center justify-between cursor-pointer hover:bg-brand-dark/5"
+        className="p-4 flex items-center justify-between cursor-pointer hover:bg-brand-muted/15"
         onClick={onToggle}
       >
         <div className="flex-1 grid grid-cols-9 gap-4 items-center mr-4 py-2">
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">SO#</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">SO#</span>
             <span className="text-sm font-bold text-brand-dark truncate">{project.id}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Project</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Project</span>
             <span className="text-sm font-medium text-brand-dark truncate" title={project.name}>{project.name}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Customer</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Customer</span>
             <span className="text-sm text-brand-dark truncate" title={project.customer}>{project.customer}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Carrier</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Carrier</span>
             <span className="text-sm text-brand-dark truncate" title={project.inlandTransport.carrier || '-'}>{project.inlandTransport.carrier || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Serial #</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Serial #</span>
             <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Departure</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Departure</span>
             <span className="text-sm text-brand-dark truncate">
               {(project.oceanFreight.atd && project.oceanFreight.atd !== '-') ? (
                 <span className="text-emerald-600 font-medium">{project.oceanFreight.atd} (A)</span>
@@ -2550,7 +2561,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Arrival</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Arrival</span>
             <span className="text-sm text-brand-dark truncate">
               {(project.oceanFreight.ata && project.oceanFreight.ata !== '-') ? (
                 <span className="text-emerald-600 font-medium">{project.oceanFreight.ata} (A)</span>
@@ -2560,11 +2571,11 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">CIF Date</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">CIF Date</span>
             <span className="text-sm text-brand-dark font-medium truncate">{project.oceanFreight.cifDate || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">DDP Date</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">DDP Date</span>
             <span className="text-sm text-brand-dark font-medium truncate">{project.inlandTransport.ddpDate || '-'}</span>
           </div>
         </div>
@@ -2572,7 +2583,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
           <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark">
             {project.currentStage}
           </span>
-          <ChevronDown className={`text-brand-dark/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`text-brand-secondary transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
 
@@ -2582,13 +2593,13 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-brand-dark/10 bg-brand-light/20 overflow-hidden"
+            className="border-t border-brand-secondary/30 bg-brand-light/20 overflow-hidden"
           >
             <div className="p-6 flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                 {/* General Info */}
               <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">General Info</h4>
+                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">General Info</h4>
                 <Field label="Unit Type" value={project.unitType || ''} onChange={(v) => handleChange('unitType', v as any)} />
                 <Field label="Serial #" value={project.serialNumber || ''} onChange={(v) => handleChange('serialNumber', v)} />
                 <Field label="Customer" value={project.customer || ''} onChange={(v) => handleChange('customer', v)} />
@@ -2600,7 +2611,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 
               {/* Ocean Transportation */}
               <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Ocean Transportation</h4>
+                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Ocean Transportation</h4>
                 <CheckboxWithDateField label="1. CIPL" checked={getDoc('CIPL')} date={getDocDate('CIPL')} onCheckChange={(v) => handleDocChange('CIPL', v)} onDateChange={(v) => handleDocChange('CIPL', getDoc('CIPL'), v)} />
                 <CheckboxWithDateField label="2. ISF Filling" checked={getDoc('ISF')} date={getDocDate('ISF')} onCheckChange={(v) => handleDocChange('ISF', v)} onDateChange={(v) => handleDocChange('ISF', getDoc('ISF'), v)} />
                 <CheckboxWithDateField label="3. SBL" checked={getDoc('SBL')} date={getDocDate('SBL')} onCheckChange={(v) => handleDocChange('SBL', v)} onDateChange={(v) => handleDocChange('SBL', getDoc('SBL'), v)} />
@@ -2608,8 +2619,8 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
                 <CheckboxWithDateField label="5. AN" checked={getDoc('Arrival Notice')} date={getDocDate('Arrival Notice')} onCheckChange={(v) => handleDocChange('Arrival Notice', v)} onDateChange={(v) => handleDocChange('Arrival Notice', getDoc('Arrival Notice'), v)} />
                 <CheckboxWithDateField label="6. Customs Clearance" checked={getDoc('Customs Clearance')} date={getDocDate('Customs Clearance')} onCheckChange={(v) => handleDocChange('Customs Clearance', v)} onDateChange={(v) => handleDocChange('Customs Clearance', getDoc('Customs Clearance'), v)} />
                 
-                <div className="pt-6 mt-2 border-t border-brand-dark/10">
-                  <h5 className="text-xs font-bold text-brand-dark/50 uppercase tracking-wider mb-2">Document Sharing (Vendor)</h5>
+                <div className="pt-6 mt-2 border-t border-brand-secondary/30">
+                  <h5 className="text-xs font-bold text-brand-secondary uppercase tracking-wider mb-2">Document Sharing (Vendor)</h5>
                   <CheckboxWithDateField label="Packing List" checked={getDoc('Vendor - Packing List')} date={getDocDate('Vendor - Packing List')} onCheckChange={(v) => handleDocChange('Vendor - Packing List', v)} onDateChange={(v) => handleDocChange('Vendor - Packing List', getDoc('Vendor - Packing List'), v)} />
                   <CheckboxWithDateField label="SBL" checked={getDoc('Vendor - SBL')} date={getDocDate('Vendor - SBL')} onCheckChange={(v) => handleDocChange('Vendor - SBL', v)} onDateChange={(v) => handleDocChange('Vendor - SBL', getDoc('Vendor - SBL'), v)} />
                   <CheckboxWithDateField label="AN" checked={getDoc('Vendor - AN')} date={getDocDate('Vendor - AN')} onCheckChange={(v) => handleDocChange('Vendor - AN', v)} onDateChange={(v) => handleDocChange('Vendor - AN', getDoc('Vendor - AN'), v)} />
@@ -2619,7 +2630,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 
               {/* Inland Transportation */}
               <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Inland Transportation</h4>
+                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Inland Transportation</h4>
                 <CheckboxWithDateField label="1. Rail Clearance" checked={getDoc('Rail Clearance')} date={getDocDate('Rail Clearance')} onCheckChange={(v) => handleDocChange('Rail Clearance', v)} onDateChange={(v) => handleDocChange('Rail Clearance', getDoc('Rail Clearance'), v)} />
                 <CheckboxWithDateField label="2. Route Survey" checked={getDoc('Route Survey')} date={getDocDate('Route Survey')} onCheckChange={(v) => handleDocChange('Route Survey', v)} onDateChange={(v) => handleDocChange('Route Survey', getDoc('Route Survey'), v)} />
                 <CheckboxWithDateField label="3. HH Permit" checked={getDoc('HH Permit status')} date={getDocDate('HH Permit status')} onCheckChange={(v) => handleDocChange('HH Permit status', v)} onDateChange={(v) => handleDocChange('HH Permit status', getDoc('HH Permit status'), v)} />
@@ -2627,8 +2638,8 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
                 <CheckboxWithDateField label="5. Loading Drawing" checked={getDoc('Loading Drawing')} date={getDocDate('Loading Drawing')} onCheckChange={(v) => handleDocChange('Loading Drawing', v)} onDateChange={(v) => handleDocChange('Loading Drawing', getDoc('Loading Drawing'), v)} />
                 <CheckboxWithDateField label="6. Transportation Plan" checked={getDoc('Transportation Plan')} date={getDocDate('Transportation Plan')} onCheckChange={(v) => handleDocChange('Transportation Plan', v)} onDateChange={(v) => handleDocChange('Transportation Plan', getDoc('Transportation Plan'), v)} />
                 
-                <div className="pt-6 mt-2 border-t border-brand-dark/10">
-                  <h5 className="text-xs font-bold text-brand-dark/50 uppercase tracking-wider mb-2">Document Sharing (Broker)</h5>
+                <div className="pt-6 mt-2 border-t border-brand-secondary/30">
+                  <h5 className="text-xs font-bold text-brand-secondary uppercase tracking-wider mb-2">Document Sharing (Broker)</h5>
                   <CheckboxWithDateField label="CIPL" checked={getDoc('Broker - CIPL')} date={getDocDate('Broker - CIPL')} onCheckChange={(v) => handleDocChange('Broker - CIPL', v)} onDateChange={(v) => handleDocChange('Broker - CIPL', getDoc('Broker - CIPL'), v)} />
                   <CheckboxWithDateField label="SBL" checked={getDoc('Broker - SBL')} date={getDocDate('Broker - SBL')} onCheckChange={(v) => handleDocChange('Broker - SBL', v)} onDateChange={(v) => handleDocChange('Broker - SBL', getDoc('Broker - SBL'), v)} />
                   <CheckboxWithDateField label="AN" checked={getDoc('Broker - AN')} date={getDocDate('Broker - AN')} onCheckChange={(v) => handleDocChange('Broker - AN', v)} onDateChange={(v) => handleDocChange('Broker - AN', getDoc('Broker - AN'), v)} />
@@ -2638,7 +2649,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 
               {/* Dates */}
               <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Dates</h4>
+                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Dates</h4>
                 <DateField label="Departure from Korea" value={project.oceanFreight.etd || ''} onChange={(v) => handleChange('etd', v, 'oceanFreight')} />
                 <DateField label="Arrival at US Port" value={project.oceanFreight.eta || ''} onChange={(v) => handleChange('eta', v, 'oceanFreight')} />
                 <DateField label="CIF Date" value={project.oceanFreight.cifDate || ''} onChange={(v) => handleChange('cifDate', v, 'oceanFreight')} />
@@ -2649,7 +2660,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 
               {/* Logistics Details */}
               <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Logistics Details</h4>
+                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Logistics Details</h4>
                 <Field label="Transit time" value={project.inlandTransport.transitTime || ''} onChange={(v) => handleChange('transitTime', v, 'inlandTransport')} />
                 <Field label="Port" value={project.inlandTransport.port || project.origin || ''} onChange={(v) => handleChange('port', v, 'inlandTransport')} />
                 <Field label="Site Address" value={project.destination || ''} onChange={(v) => handleChange('destination', v)} />
@@ -2670,17 +2681,17 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 function SelectField({ label, value, options, onChange }: { label: string, value: string, options: string[], onChange: (v: string) => void }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-bold text-brand-dark/60">{label}</label>
+      <label className="text-xs font-bold text-brand-dark/80">{label}</label>
       <div className="relative">
         <select 
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-1.5 bg-white border border-brand-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow appearance-none"
+          className="w-full px-3 py-1.5 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow appearance-none"
         >
           <option value="" disabled>Select {label}</option>
           {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
-        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-dark/40 pointer-events-none" />
+        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-secondary pointer-events-none" />
       </div>
     </div>
   );
@@ -2689,12 +2700,12 @@ function SelectField({ label, value, options, onChange }: { label: string, value
 function Field({ label, value, onChange, type = "text" }: { label: string, value: string, onChange: (v: string) => void, type?: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-bold text-brand-dark/60">{label}</label>
+      <label className="text-xs font-bold text-brand-dark/80">{label}</label>
       <input 
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="px-3 py-1.5 bg-white border border-brand-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow"
+        className="px-3 py-1.5 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow"
       />
     </div>
   );
@@ -2703,12 +2714,12 @@ function Field({ label, value, onChange, type = "text" }: { label: string, value
 function TextAreaField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-bold text-brand-dark/60">{label}</label>
+      <label className="text-xs font-bold text-brand-dark/80">{label}</label>
       <textarea 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="px-3 py-1.5 bg-white border border-brand-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[60px] resize-y"
+        className="px-3 py-1.5 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[60px] resize-y"
       />
     </div>
   );
@@ -2732,7 +2743,7 @@ function CheckboxWithDateField({ label, checked, date, onCheckChange, onDateChan
         type="date" 
         value={date} 
         onChange={(e) => onDateChange(e.target.value)}
-        className="px-2 py-1 bg-white border border-brand-dark/20 rounded text-xs focus:outline-none focus:ring-1 focus:ring-brand-dark/30 w-32"
+        className="px-2 py-1 bg-white border border-brand-secondary/50 rounded text-xs focus:outline-none focus:ring-1 focus:ring-brand-dark/30 w-32"
       />
     </div>
   );
@@ -2756,13 +2767,13 @@ function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdat
   return (
     <div className="flex flex-col gap-4">
       <h3 
-        className="text-lg font-bold text-brand-dark border-b border-brand-dark/10 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
+        className="text-lg font-bold text-brand-dark border-b border-brand-secondary/30 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
         onClick={() => setIsGroupExpanded(!isGroupExpanded)}
       >
-        <Wrench size={18} className="text-brand-dark/40" />
+        <Wrench size={18} className="text-brand-secondary" />
         {contractor}
-        <span className="text-sm font-normal text-brand-dark/50 bg-brand-dark/5 px-2 py-0.5 rounded-full ml-2">{projs.length}</span>
-        <ChevronDown size={18} className={`ml-auto text-brand-dark/40 transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
+        <span className="text-sm font-normal text-brand-secondary bg-brand-muted/15 px-2 py-0.5 rounded-full ml-2">{projs.length}</span>
+        <ChevronDown size={18} className={`ml-auto text-brand-secondary transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
       </h3>
       <AnimatePresence>
         {isGroupExpanded && (
@@ -2811,35 +2822,35 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-brand-dark/10 overflow-hidden transition-all">
-      <div onClick={onToggle} className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-brand-dark/5 transition-colors">
+    <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden transition-all">
+      <div onClick={onToggle} className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-brand-muted/15 transition-colors">
         <div className="flex-1 grid grid-cols-7 gap-4 items-center mr-4 py-2">
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">SO#</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">SO#</span>
             <span className="text-sm font-bold text-brand-dark truncate">{project.id}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Project</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Project</span>
             <span className="text-sm font-medium text-brand-dark truncate" title={project.name}>{project.name}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Customer</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Customer</span>
             <span className="text-sm text-brand-dark truncate" title={project.customer}>{project.customer}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Contractor</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Contractor</span>
             <span className="text-sm text-brand-dark truncate" title={project.installation.contractor || '-'}>{project.installation.contractor || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Serial #</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Serial #</span>
             <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">Start Date</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Start Date</span>
             <span className="text-sm text-brand-dark font-medium truncate">{project.installation.startDate || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-dark/50 font-bold uppercase tracking-wider">End Date</span>
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">End Date</span>
             <span className="text-sm text-brand-dark font-medium truncate">{project.installation.endDate || '-'}</span>
           </div>
         </div>
@@ -2847,7 +2858,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
           <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark">
             {project.currentStage}
           </span>
-          <ChevronDown className={`text-brand-dark/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`text-brand-secondary transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
 
@@ -2857,7 +2868,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-brand-dark/10 bg-brand-light/20 overflow-hidden"
+            className="border-t border-brand-secondary/30 bg-brand-light/20 overflow-hidden"
           >
             <div className="p-6 flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -2877,11 +2888,11 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
               <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
 
               <div className="space-y-3 pt-2">
-                <h4 className="text-sm font-bold text-brand-dark border-b border-brand-dark/10 pb-2">Oil Delivery Schedule</h4>
+                <h4 className="text-sm font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Oil Delivery Schedule</h4>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {[0, 1, 2, 3].map(i => (
-                    <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-white p-3 rounded-lg border border-brand-dark/10 shadow-sm">
-                      <span className="text-sm font-bold text-brand-dark/60 w-24 shrink-0">{getDeliveryLabel(i)}</span>
+                    <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-white p-3 rounded-lg border border-brand-secondary/30 shadow-sm">
+                      <span className="text-sm font-bold text-brand-dark/80 w-24 shrink-0">{getDeliveryLabel(i)}</span>
                       <div className="flex-1 sm:w-32"><DateField label="Date" value={oilDeliveries[i].date} onChange={(v) => handleOilChange(i, 'date', v)} /></div>
                       <div className="flex-1 sm:w-24"><Field label="Time" type="time" value={oilDeliveries[i].time} onChange={(v) => handleOilChange(i, 'time', v)} /></div>
                     </div>
@@ -2914,12 +2925,12 @@ function InstallationView({ projects, onUpdateProject }: { projects: Project[], 
       className="w-full mx-auto flex flex-col gap-6 pb-12"
     >
       <h2 className="text-2xl font-bold mb-2 text-brand-dark flex items-center gap-2">
-        <Wrench className="text-brand-dark/50" />
+        <Wrench className="text-brand-secondary" />
         Installation Overview
       </h2>
       
       {projects.length === 0 ? (
-        <div className="p-8 text-center text-brand-dark/50 bg-white rounded-xl border border-brand-dark/10">No projects found.</div>
+        <div className="p-8 text-center text-brand-secondary bg-white rounded-xl border border-brand-secondary/30">No projects found.</div>
       ) : (
         Object.entries(groupedProjects).map(([contractor, projs]) => (
           <ContractorGroup 

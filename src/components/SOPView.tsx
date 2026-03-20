@@ -8,21 +8,21 @@ import {
 const Step = ({ number, title, subtitle, children }: any) => (
   <div className="relative flex gap-6 md:gap-8 pb-12 last:pb-0">
     {/* Timeline Line */}
-    <div className="absolute left-[23px] md:left-[27px] top-14 bottom-0 w-1 bg-slate-200 rounded-full" />
+    <div className="absolute left-[23px] md:left-[27px] top-14 bottom-0 w-1 bg-brand-dark/10 rounded-full" />
     
     {/* Step Number */}
     <div className="relative z-10 flex flex-col items-center">
-      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#1A365D] text-white flex items-center justify-center font-bold text-xl md:text-2xl shadow-md shrink-0 border-4 border-white">
+      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-brand-dark text-brand-light flex items-center justify-center font-bold text-xl md:text-2xl shadow-md shrink-0 border-4 border-white">
         {number}
       </div>
     </div>
     
     {/* Content Card */}
     <div className="flex-1 pt-1">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="bg-slate-50 px-6 py-5 border-b border-slate-200">
-          <h3 className="text-xl md:text-2xl font-bold text-[#1A365D]">{title}</h3>
-          {subtitle && <p className="text-slate-500 text-base mt-1.5 font-medium">{subtitle}</p>}
+      <div className="bg-white rounded-2xl border border-brand-secondary/30 shadow-sm overflow-hidden">
+        <div className="bg-brand-muted/15 px-6 py-5 border-b border-brand-secondary/30">
+          <h3 className="text-xl md:text-2xl font-bold text-brand-dark">{title}</h3>
+          {subtitle && <p className="text-brand-dark/80 text-base mt-1.5 font-medium">{subtitle}</p>}
         </div>
         <div className="p-6 md:p-8 space-y-6">
           {children}
@@ -36,12 +36,12 @@ const Task = ({ icon: Icon, title, description, children, variant = 'default' }:
   const isAlert = variant === 'alert';
   return (
     <div className="flex gap-4 items-start">
-      <div className={`mt-1 p-2.5 rounded-xl shrink-0 ${isAlert ? 'bg-rose-100 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
+      <div className={`mt-1 p-2.5 rounded-xl shrink-0 ${isAlert ? 'bg-rose-100 text-rose-600' : 'bg-brand-muted/15 text-brand-dark/80'}`}>
         {Icon ? <Icon size={24} /> : <CheckCircle2 size={24} />}
       </div>
       <div className="flex-1">
-        <h4 className={`font-bold text-lg ${isAlert ? 'text-rose-900' : 'text-slate-800'}`}>{title}</h4>
-        {description && <div className={`mt-2 text-base whitespace-pre-line leading-relaxed ${isAlert ? 'text-rose-700' : 'text-slate-600'}`}>{description}</div>}
+        <h4 className={`font-bold text-lg ${isAlert ? 'text-rose-900' : 'text-brand-dark'}`}>{title}</h4>
+        {description && <div className={`mt-2 text-base whitespace-pre-line leading-relaxed ${isAlert ? 'text-rose-700' : 'text-brand-dark/80'}`}>{description}</div>}
         {children && <div className="mt-4">{children}</div>}
       </div>
     </div>
@@ -49,9 +49,9 @@ const Task = ({ icon: Icon, title, description, children, variant = 'default' }:
 };
 
 const Decision = ({ condition, children }: any) => (
-  <div className="mt-6 bg-slate-50/50 border border-slate-200 rounded-xl overflow-hidden">
-    <div className="bg-slate-100/50 px-5 py-3 border-b border-slate-200 flex items-center gap-3 font-bold text-slate-700 text-base">
-      <GitBranch size={18} className="text-slate-500" />
+  <div className="mt-6 bg-brand-dark/[0.02] border border-brand-secondary/30 rounded-xl overflow-hidden">
+    <div className="bg-brand-muted/15 px-5 py-3 border-b border-brand-secondary/30 flex items-center gap-3 font-bold text-brand-dark/80 text-base">
+      <GitBranch size={18} className="text-brand-secondary" />
       Decision: {condition}
     </div>
     <div className="p-4 flex flex-col gap-4">
@@ -68,14 +68,14 @@ const Path = ({ type, title, children }: any) => {
   const isInfo = type === 'info';
   
   let bg = 'bg-white';
-  let border = 'border-slate-200';
-  let text = 'text-slate-800';
+  let border = 'border-brand-secondary/30';
+  let text = 'text-brand-dark';
   let Icon = ArrowRight;
-  let iconColor = 'text-slate-400';
+  let iconColor = 'text-brand-secondary';
 
   if (isYes) { border = 'border-emerald-200'; iconColor = 'text-emerald-500'; Icon = CheckCircle2; }
   if (isNo) { border = 'border-rose-200'; iconColor = 'text-rose-500'; Icon = XCircle; }
-  if (isInfo) { border = 'border-blue-200'; iconColor = 'text-blue-500'; Icon = Info; }
+  if (isInfo) { border = 'border-brand-secondary/30'; iconColor = 'text-brand-secondary'; Icon = Info; }
 
   return (
     <div className={`border rounded-xl p-5 h-full ${bg} ${border} shadow-sm transition-all hover:shadow-md`}>
@@ -83,7 +83,7 @@ const Path = ({ type, title, children }: any) => {
         <Icon size={20} className={iconColor} />
         {title}
       </div>
-      <div className="text-slate-600 text-base space-y-3 leading-relaxed pl-7">
+      <div className="text-brand-dark/80 text-base space-y-3 leading-relaxed pl-7">
         {children}
       </div>
     </div>
@@ -92,11 +92,11 @@ const Path = ({ type, title, children }: any) => {
 
 const SectionHeader = ({ title }: { title: string }) => (
   <div className="flex items-center gap-4 mb-10 mt-16 first:mt-4">
-    <div className="h-px bg-slate-300 flex-1" />
-    <h2 className="text-2xl font-bold text-[#1A365D] bg-slate-100 px-6 py-2 rounded-full border border-slate-200">
+    <div className="h-px bg-brand-dark/20 flex-1" />
+    <h2 className="text-2xl font-bold text-brand-dark bg-brand-muted/15 px-6 py-2 rounded-full border border-brand-secondary/30">
       {title}
     </h2>
-    <div className="h-px bg-slate-300 flex-1" />
+    <div className="h-px bg-brand-dark/20 flex-1" />
   </div>
 );
 
@@ -105,28 +105,28 @@ export function SOPView() {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 pb-16 px-4">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-        <h2 className="text-3xl font-bold text-[#1A365D] flex items-center gap-4 mb-8">
-          <BookOpen size={36} className="text-blue-600" />
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-brand-secondary/30">
+        <h2 className="text-3xl font-bold text-brand-dark flex items-center gap-4 mb-8">
+          <BookOpen size={36} className="text-brand-dark/80" />
           Standard Operating Procedures
         </h2>
         
-        <div className="flex flex-wrap gap-4 border-b border-slate-200">
+        <div className="flex flex-wrap gap-4 border-b border-brand-secondary/30">
           <button 
             onClick={() => setActiveSopTab('transport-hde')}
-            className={`pb-4 px-6 text-lg font-bold transition-colors border-b-4 ${activeSopTab === 'transport-hde' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            className={`pb-4 px-6 text-lg font-bold transition-colors border-b-4 ${activeSopTab === 'transport-hde' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
           >
             Transportation (HDE)
           </button>
           <button 
             onClick={() => setActiveSopTab('transport-hpt')}
-            className={`pb-4 px-6 text-lg font-bold transition-colors border-b-4 ${activeSopTab === 'transport-hpt' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            className={`pb-4 px-6 text-lg font-bold transition-colors border-b-4 ${activeSopTab === 'transport-hpt' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
           >
             Transportation (HPT)
           </button>
           <button 
             onClick={() => setActiveSopTab('installation')}
-            className={`pb-4 px-6 text-lg font-bold transition-colors border-b-4 ${activeSopTab === 'installation' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            className={`pb-4 px-6 text-lg font-bold transition-colors border-b-4 ${activeSopTab === 'installation' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
           >
             Installation
           </button>

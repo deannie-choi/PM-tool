@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId, useRef } from 'react';
+import React, { useState, useEffect, useId, useRef, useCallback, useMemo } from 'react';
 import { 
   Ship, Truck, Wrench, LayoutDashboard, FolderKanban, 
   Settings, Bell, Search, CheckCircle2, Circle, Clock,
@@ -10,12 +10,67 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SOPView } from './components/SOPView';
+import { db, auth, googleProvider } from './firebase';
+import { collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string;
+    email?: string | null;
+    emailVerified?: boolean;
+    isAnonymous?: boolean;
+    tenantId?: string | null;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 type Stage = 'Manufacturing' | 'Ocean Freight' | 'Inland Transport' | 'Installation' | 'Commissioning';
 
 export interface AppUser {
   id: string;
   username: string;
+  email: string;
   password?: string;
   name: string;
   role: 'admin' | 'leader' | 'member';
@@ -60,13 +115,6 @@ export interface ProjectPaymentData {
   totalCost: number;
   milestones: PaymentMilestone[];
 }
-
-export const mockUsers: AppUser[] = [
-  { id: 'u0', username: 'admin', password: '1234', name: 'System Admin', role: 'admin' },
-  { id: 'u1', username: 'leader', password: '1234', name: 'Team Leader', role: 'leader' },
-  { id: 'u2', username: 'member1', password: '1234', name: 'Alex (Member)', role: 'member' },
-  { id: 'u3', username: 'member2', password: '1234', name: 'Sarah (Member)', role: 'member' },
-];
 
 interface Project {
   id: string;
@@ -130,114 +178,107 @@ interface Project {
   sopTracker?: Record<string, { completed: boolean; date?: string; note?: string }>;
 }
 
-const mockProjects: Project[] = [
-  {
-    id: 'SO-23-9981',
-    name: 'Austin Substation Expansion',
-    customer: 'Texas Grid Co.',
-    serialNumber: 'S/N-TX-001',
-    drawingNumber: 'DWG-AUS-2023-V1',
-    unitType: 'HDE',
-    kv: '345',
-    mva: '600',
-    currentStage: 'Ocean Freight',
-    origin: 'Ulsan, KR',
-    destination: 'Austin, TX, USA',
-    startDate: '2023-11-01',
-    estFinalDelivery: '2024-03-15',
-    oceanFreight: {
-      fobDate: '2024-01-15',
-      cifDate: '2024-02-28',
-      etd: '2024-01-20',
-      eta: '2024-02-28',
-      atd: '2024-01-21',
-      ata: '-',
-      documents: [
-        { name: 'B/L', received: true },
-        { name: 'ISF', received: true },
-        { name: 'Arrival Notice', received: false },
-        { name: 'CIPL', received: true },
-        { name: 'COO', received: true },
-      ]
-    },
-    inlandTransport: {
-      ddpDate: '2024-03-15',
-      carrier: 'Global Heavy Trans / US Rail',
-      dischargingMethod: 'Jack & Slide',
-      etd: '2024-03-05',
-      eta: '2024-03-12',
-      atd: '-',
-      ata: '-',
-      siteVisit: '2023-12-10',
-      railClearance: true,
-      roadPermit: false,
-      podReceived: false,
-    },
-    installation: {
-      startDate: '2024-03-15',
-      endDate: '2024-04-01',
-      contractor: 'Texas Industrial Services',
-      supervisor: 'James Park (HDE)',
-      oilTotalReq: '15,000 gal',
-      oilDeliveries: [
-        { name: '1st Delivery', date: '2024-03-20', time: '09:00' }
-      ],
-      completionReport: false,
-    },
-    assignedTo: 'u2',
-    logs: [
-      { id: 'l1', date: '2024-01-20', message: 'Vessel departed from Busan Port.', type: 'info' },
-      { id: 'l2', date: '2024-02-01', message: 'Weather delay expected in Pacific.', type: 'warning' },
-      { id: 'l3', date: '2023-11-01', message: 'Project initialized.', type: 'success' },
-    ],
-    paymentMilestones: {
-      totalRevenue: 2500000,
-      totalCost: 1800000,
-      milestones: [
-        { id: 'm1', name: 'Down Payment (20%)', isDone: true, customerAmount: 500000, customerStatus: 'Paid', hqAmount: 360000, hqStatus: 'Paid' },
-        { id: 'm2', name: 'FOB Delivery (50%)', isDone: true, customerAmount: 1250000, customerStatus: 'Invoiced', hqAmount: 900000, hqStatus: 'Pending' },
-        { id: 'm3', name: 'Arrival at Site (20%)', isDone: false, customerAmount: 500000, customerStatus: 'Pending', hqAmount: 360000, hqStatus: 'Not Started' },
-        { id: 'm4', name: 'Commissioning / PAC (10%)', isDone: false, customerAmount: 250000, customerStatus: 'Pending', hqAmount: 180000, hqStatus: 'Not Started' },
-      ]
-    }
-  }
-];
-
-function Login({ onLogin, users, onRegister }: { onLogin: (u: AppUser) => void, users: AppUser[], onRegister: (u: AppUser) => void }) {
+function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<'admin' | 'leader' | 'member'>('member');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLogin) {
-      const user = users.find(u => u.username === username.toLowerCase().trim() && (u.password === password || !u.password));
-      if (user) {
-        onLogin(user);
+    setLoading(true);
+    setError('');
+    
+    // We use a fake domain so users can just type "admin" or "leader"
+    const email = `${username.toLowerCase().trim()}@transfotrack.com`;
+    
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+        // App.tsx's onAuthStateChanged will handle the rest
       } else {
-        setError('Invalid username or password.');
+        if (!username || !password || !name) {
+          setError('Please fill in all fields.');
+          setLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters.');
+          setLoading(false);
+          return;
+        }
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+        
+        const newUser: AppUser = {
+          id: user.uid,
+          username: username.toLowerCase().trim(),
+          email: email,
+          name,
+          role
+        };
+        await setDoc(doc(db, 'users', user.uid), newUser);
+        onLogin(newUser);
       }
-    } else {
-      if (!username || !password || !name) {
-        setError('Please fill in all fields.');
-        return;
-      }
-      if (users.find(u => u.username === username.toLowerCase().trim())) {
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/email-already-in-use') {
         setError('Username already exists.');
-        return;
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        if (isLogin) {
+          setError('Invalid username or password. If you haven\'t created an account yet, please Sign Up first.');
+        } else {
+          setError('Invalid username or password.');
+        }
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Action required: Please enable "Email/Password" in your Firebase Console (Authentication > Sign-in method).');
+      } else {
+        setError(err.message || 'Authentication failed.');
       }
-      const newUser: AppUser = {
-        id: `u${Date.now()}`,
-        username: username.toLowerCase().trim(),
-        password,
-        name,
-        role
-      };
-      onRegister(newUser);
-      onLogin(newUser);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Check if user exists in Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      let appUser: AppUser;
+      if (userDoc.exists()) {
+        appUser = userDoc.data() as AppUser;
+      } else {
+        // Create new user
+        const isDefaultAdmin = user.email === 'cdh0118@gmail.com' && user.emailVerified;
+        appUser = {
+          id: user.uid,
+          username: user.email?.split('@')[0] || 'user',
+          email: user.email || '',
+          name: user.displayName || 'Unknown User',
+          role: isDefaultAdmin ? 'admin' : 'member'
+        };
+        await setDoc(userDocRef, appUser);
+      }
+      onLogin(appUser);
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setError('Sign in was cancelled.');
+      } else {
+        setError(err.message || 'Failed to sign in');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -292,7 +333,7 @@ function Login({ onLogin, users, onRegister }: { onLogin: (u: AppUser) => void, 
               value={username} 
               onChange={e => { setUsername(e.target.value); setError(''); }} 
               className="w-full px-4 py-2 border border-brand-dark/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
-              placeholder="e.g. leader" 
+              placeholder="e.g. admin" 
             />
           </div>
           <div>
@@ -302,12 +343,12 @@ function Login({ onLogin, users, onRegister }: { onLogin: (u: AppUser) => void, 
               value={password} 
               onChange={e => { setPassword(e.target.value); setError(''); }} 
               className="w-full px-4 py-2 border border-brand-dark/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
-              placeholder="••••••••" 
+              placeholder="•••••••• (min 6 chars)" 
             />
           </div>
           {error && <p className="text-red-500 text-xs font-medium">{error}</p>}
-          <button type="submit" className="w-full py-2.5 bg-brand-dark text-brand-light rounded-lg font-medium hover:bg-brand-dark/90 transition-colors shadow-sm">
-            {isLogin ? 'Sign In' : 'Sign Up'}
+          <button type="submit" disabled={loading} className="w-full py-2.5 bg-brand-dark text-brand-light rounded-lg font-medium hover:bg-brand-dark/90 transition-colors shadow-sm disabled:opacity-50">
+            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
           </button>
         </form>
 
@@ -321,15 +362,32 @@ function Login({ onLogin, users, onRegister }: { onLogin: (u: AppUser) => void, 
           </button>
         </div>
         
+        <div className="mt-6 flex items-center justify-center gap-4">
+          <div className="h-px bg-brand-dark/10 flex-1"></div>
+          <span className="text-xs text-brand-dark/40 font-medium uppercase">Or continue with</span>
+          <div className="h-px bg-brand-dark/10 flex-1"></div>
+        </div>
+
+        <button 
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="mt-6 w-full py-2.5 bg-white border border-brand-dark/20 text-brand-dark rounded-lg font-medium hover:bg-brand-dark/5 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          Google
+        </button>
+
         {isLogin && (
           <div className="mt-8 p-4 bg-brand-dark/5 rounded-lg text-sm text-brand-dark/70 border border-brand-dark/10">
-            <p className="font-bold mb-2 text-brand-dark">Demo Accounts (Password: 1234):</p>
+            <p className="font-bold mb-2 text-brand-dark">Test Accounts (Please Sign Up first):</p>
             <ul className="space-y-2">
-              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> <strong>admin</strong> (Admin - manages users)</li>
-              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> <strong>leader</strong> (Leader - sees all projects)</li>
-              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> <strong>member1</strong> (Member - sees assigned)</li>
-              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> <strong>member2</strong> (Member - sees assigned)</li>
+              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> Create <strong>admin</strong> (Role: Admin)</li>
+              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> Create <strong>leader</strong> (Role: Leader)</li>
+              <li className="flex items-center gap-2"><User size={14} className="text-brand-dark/50" /> Create <strong>member1</strong> (Role: Team Member)</li>
             </ul>
+            <p className="mt-3 text-xs text-brand-dark/50 italic">
+              * Since we are using a real database now, you must create these accounts via "Sign Up" before logging in.
+            </p>
           </div>
         )}
       </motion.div>
@@ -337,7 +395,7 @@ function Login({ onLogin, users, onRegister }: { onLogin: (u: AppUser) => void, 
   );
 }
 
-function AdminDashboard({ users, setUsers, currentUser, onLogout }: { users: AppUser[], setUsers: (u: AppUser[]) => void, currentUser: AppUser, onLogout: () => void }) {
+function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], currentUser: AppUser, onLogout: () => void }) {
   const [userToDelete, setUserToDelete] = useState<AppUser | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
@@ -347,16 +405,24 @@ function AdminDashboard({ users, setUsers, currentUser, onLogout }: { users: App
     setDeleteConfirmText('');
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (userToDelete && deleteConfirmText === userToDelete.username) {
-      setUsers(users.filter(u => u.id !== userToDelete.id));
-      setUserToDelete(null);
+      try {
+        await deleteDoc(doc(db, 'users', userToDelete.id));
+        setUserToDelete(null);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `users/${userToDelete.id}`);
+      }
     }
   };
 
-  const handleRoleChange = (id: string, newRole: 'admin' | 'leader' | 'member') => {
+  const handleRoleChange = async (id: string, newRole: 'admin' | 'leader' | 'member') => {
     if (id === currentUser.id) return alert("Cannot change your own role");
-    setUsers(users.map(u => u.id === id ? { ...u, role: newRole } : u));
+    try {
+      await updateDoc(doc(db, 'users', id), { role: newRole });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${id}`);
+    }
   };
 
   return (
@@ -475,10 +541,11 @@ function AdminDashboard({ users, setUsers, currentUser, onLogout }: { users: App
 }
 
 export default function App() {
-  const [users, setUsers] = useState<AppUser[]>(mockUsers);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'payments' | 'transportation' | 'installation' | 'sop'>('dashboard');
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   const [filterCustomer, setFilterCustomer] = useState<string>('');
@@ -486,13 +553,75 @@ export default function App() {
   const [filterContractor, setFilterContractor] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setCurrentUser(userDoc.data() as AppUser);
+          } else {
+            // Fallback if user doc doesn't exist yet but they are logged in
+            setCurrentUser({
+              id: user.uid,
+              username: user.email?.split('@')[0] || 'user',
+              name: user.displayName || 'Unknown User',
+              role: 'member'
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
+      } else {
+        setCurrentUser(null);
+      }
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthReady || !currentUser) return;
+
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const usersData: AppUser[] = [];
+      snapshot.forEach((doc) => usersData.push(doc.data() as AppUser));
+      setUsers(usersData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'users');
+    });
+
+    const unsubscribeProjects = onSnapshot(collection(db, 'projects'), (snapshot) => {
+      const projectsData: Project[] = [];
+      snapshot.forEach((doc) => projectsData.push(doc.data() as Project));
+      setProjects(projectsData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'projects');
+    });
+
+    return () => {
+      unsubscribeUsers();
+      unsubscribeProjects();
+    };
+  }, [isAuthReady, currentUser]);
+
   const selectedProject = projects.find(p => p.id === selectedProjectId) || null;
 
-  const handleUpdateProject = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+  const handleUpdateProject = async (updatedProject: Project, oldId?: string) => {
+    try {
+      if (oldId && oldId !== updatedProject.id) {
+        await setDoc(doc(db, 'projects', updatedProject.id), updatedProject as any);
+        await deleteDoc(doc(db, 'projects', oldId));
+        setSelectedProjectId(updatedProject.id);
+      } else {
+        await updateDoc(doc(db, 'projects', updatedProject.id), updatedProject as any);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `projects/${updatedProject.id}`);
+    }
   };
 
-  const handleAddProject = () => {
+  const handleAddProject = async () => {
     const newProject: Project = {
       id: `SO-${Math.floor(Math.random() * 10000)}`,
       name: 'New Project',
@@ -522,16 +651,24 @@ export default function App() {
       assignedTo: currentUser?.role === 'leader' ? null : (currentUser?.id || null),
       logs: []
     };
-    setProjects([...projects, newProject]);
-    setSelectedProjectId(newProject.id);
+    try {
+      await setDoc(doc(db, 'projects', newProject.id), newProject);
+      setSelectedProjectId(newProject.id);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `projects/${newProject.id}`);
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    setProjects(projects.filter(p => p.id !== id));
-    if (selectedProjectId === id) setSelectedProjectId(null);
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'projects', id));
+      if (selectedProjectId === id) setSelectedProjectId(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `projects/${id}`);
+    }
   };
 
-  const roleFilteredProjects = projects.filter(p => currentUser?.role === 'leader' || p.assignedTo === currentUser?.id);
+  const roleFilteredProjects = projects.filter(p => currentUser?.role === 'leader' || currentUser?.role === 'admin' || p.assignedTo === currentUser?.id);
 
   const filteredProjects = roleFilteredProjects.filter(p => {
     if (searchQuery) {
@@ -551,14 +688,18 @@ export default function App() {
   const uniqueCustomers = Array.from(new Set(roleFilteredProjects.map(p => p.customer).filter(Boolean)));
   const uniqueCarriers = Array.from(new Set(roleFilteredProjects.map(p => p.inlandTransport.carrier).filter(Boolean)));
   const uniqueContractors = Array.from(new Set(roleFilteredProjects.map(p => p.installation.contractor).filter(Boolean)));
-  const allCustomers = Array.from(new Set(projects.map(p => p.customer).filter(Boolean)));
+  const allCustomers = Array.from(new Set(projects.map(p => p.customer).filter(Boolean))) as string[];
+
+  if (!isAuthReady) {
+    return <div className="min-h-screen flex items-center justify-center bg-brand-light font-sans text-brand-dark">Loading...</div>;
+  }
 
   if (!currentUser) {
-    return <Login onLogin={setCurrentUser} users={users} onRegister={(u) => setUsers([...users, u])} />;
+    return <Login onLogin={setCurrentUser} />;
   }
 
   if (currentUser.role === 'admin') {
-    return <AdminDashboard users={users} setUsers={setUsers} currentUser={currentUser} onLogout={() => { setCurrentUser(null); setSelectedProjectId(null); }} />;
+    return <AdminDashboard users={users} currentUser={currentUser} onLogout={() => { signOut(auth); setCurrentUser(null); setSelectedProjectId(null); }} />;
   }
 
   return (
@@ -777,7 +918,7 @@ function getClosestDateInfo(project: Project) {
   return dates[0];
 }
 
-function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void }) {
+function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void, key?: string }) {
   const projectsWithDates = projects.map(p => {
     const closestDate = getClosestDateInfo(p);
     return { project: p, closestDate };
@@ -1005,7 +1146,7 @@ const getDeliveryLabel = (i: number) => {
   return `${labels[i] || (i + 1) + 'th'} Delivery`;
 };
 
-function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUpdate, onDelete }: { project: Project, currentUser: AppUser, users: AppUser[], allCustomers: string[], onBack: () => void, onUpdate: (p: Project) => void, onDelete: () => void }) {
+function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUpdate, onDelete }: { project: Project, currentUser: AppUser, users: AppUser[], allCustomers: string[], onBack: () => void, onUpdate: (p: Project, oldId?: string) => void, onDelete: () => void, key?: string }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'logs'>('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Project>(project);
@@ -1017,7 +1158,11 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
   }, [project]);
 
   const handleSave = () => {
-    onUpdate(editData);
+    const dataToSave = { ...editData };
+    if (!dataToSave.id.trim()) {
+      dataToSave.id = project.id;
+    }
+    onUpdate(dataToSave, project.id);
     setIsEditing(false);
   };
 
@@ -1583,7 +1728,7 @@ function CheckboxItem({ label, checked, isEditing, onChange }: any) {
   );
 }
 
-function ProjectList({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void }) {
+function ProjectList({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void, key?: string }) {
   return (
     <div className="w-full mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-brand-dark">All Projects</h2>
@@ -1624,7 +1769,7 @@ const calculateDueDate = (invoiceDate?: string, netTerms?: string) => {
   return date.toISOString().split('T')[0];
 };
 
-function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, onUpdateProject: (p: Project) => void }) {
+function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, onUpdateProject: (p: Project) => void, key?: string }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<ProjectPaymentData | null>(null);
 
@@ -2228,7 +2373,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
   );
 }
 
-function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void }) {
+function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void, key?: string }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -2255,7 +2400,7 @@ function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUp
   );
 }
 
-function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProject }: { carrier: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void }) {
+function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProject }: { carrier: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void, key?: string }) {
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
 
   return (
@@ -2293,7 +2438,7 @@ function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProje
   );
 }
 
-function TransportationView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void }) {
+function TransportationView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void, key?: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const groupedProjects = projects.reduce((acc, p) => {
@@ -2335,11 +2480,11 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
 
 
 
-function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void }) {
+function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void, key?: string }) {
   const handleChange = (field: string, value: any, nestedObj?: 'oceanFreight' | 'inlandTransport' | 'installation') => {
     const updated = { ...project };
     if (nestedObj) {
-      updated[nestedObj] = { ...updated[nestedObj], [field]: value };
+      (updated as any)[nestedObj] = { ...(updated as any)[nestedObj], [field]: value };
     } else {
       (updated as any)[field] = value;
     }
@@ -2444,7 +2589,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
                 {/* General Info */}
               <div className="space-y-4">
                 <h4 className="font-bold text-brand-dark border-b border-brand-dark/10 pb-2">General Info</h4>
-                <Field label="Vendor" value={project.unitType || ''} onChange={(v) => handleChange('unitType', v)} />
+                <Field label="Unit Type" value={project.unitType || ''} onChange={(v) => handleChange('unitType', v as any)} />
                 <Field label="Serial #" value={project.serialNumber || ''} onChange={(v) => handleChange('serialNumber', v)} />
                 <Field label="Customer" value={project.customer || ''} onChange={(v) => handleChange('customer', v)} />
                 <Field label="Project" value={project.name || ''} onChange={(v) => handleChange('name', v)} />
@@ -2605,7 +2750,7 @@ function CheckboxField({ label, checked, onChange }: { label: string, checked: b
   );
 }
 
-function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdateProject }: { contractor: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void }) {
+function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdateProject }: { contractor: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void, key?: string }) {
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
 
   return (
@@ -2643,11 +2788,11 @@ function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdat
   );
 }
 
-function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void }) {
+function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void, key?: string }) {
   const handleChange = (field: string, value: any, nestedObj?: 'oceanFreight' | 'inlandTransport' | 'installation') => {
     const updated = { ...project };
     if (nestedObj) {
-      updated[nestedObj] = { ...updated[nestedObj], [field]: value };
+      (updated as any)[nestedObj] = { ...(updated as any)[nestedObj], [field]: value };
     } else {
       (updated as any)[field] = value;
     }
@@ -2751,7 +2896,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
   );
 }
 
-function InstallationView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void }) {
+function InstallationView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void, key?: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const groupedProjects = projects.reduce((acc, p) => {

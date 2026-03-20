@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "AppUser": {
+      "title": "AppUser",
+      "description": "A user of the application",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The user's unique ID (Firebase Auth UID)" },
+        "name": { "type": "string", "description": "The user's display name" },
+        "email": { "type": "string", "description": "The user's email address" },
+        "role": { "type": "string", "enum": ["admin", "leader", "member"], "description": "The user's role" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A project tracking logistics and installation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Project ID" },
+        "name": { "type": "string", "description": "Project Name" },
+        "customer": { "type": "string", "description": "Customer Name" },
+        "serialNumber": { "type": "string", "description": "Serial Number" },
+        "drawingNumber": { "type": "string", "description": "Drawing Number" },
+        "currentStage": { "type": "string", "enum": ["Manufacturing", "Ocean Freight", "Inland Transport", "Installation", "Commissioning"], "description": "Current Stage" },
+        "origin": { "type": "string", "description": "Origin" },
+        "destination": { "type": "string", "description": "Destination" },
+        "startDate": { "type": "string", "description": "Start Date" },
+        "estFinalDelivery": { "type": "string", "description": "Estimated Final Delivery" },
+        "assignedTo": { "type": "string", "description": "Assigned User ID" },
+        "unitType": { "type": "string", "description": "Unit Type" },
+        "kv": { "type": "string", "description": "KV" },
+        "mva": { "type": "string", "description": "MVA" },
+        "oceanFreight": { "type": "object", "description": "Ocean Freight Details" },
+        "inlandTransport": { "type": "object", "description": "Inland Transport Details" },
+        "installation": { "type": "object", "description": "Installation Details" },
+        "logs": { "type": "array", "description": "Project Logs" },
+        "paymentMilestones": { "type": "object", "description": "Payment Milestones" }
+      },
+      "required": ["id", "name", "customer", "currentStage"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/AppUser" },
+      "description": "Stores user profiles and roles"
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Stores project tracking data"
+    }
+  }
+}

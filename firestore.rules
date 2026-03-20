@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email == "cdh0118@gmail.com" && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
+             data.id is string &&
+             data.name is string &&
+             data.email is string &&
+             data.role in ['admin', 'leader', 'member'];
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'name', 'customer', 'currentStage']) &&
+             data.id is string &&
+             data.name is string &&
+             data.customer is string &&
+             data.currentStage in ['Manufacturing', 'Ocean Freight', 'Inland Transport', 'Installation', 'Commissioning'];
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // Allow user to create their own profile, but only as 'member' unless they are admin
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (
+        request.resource.data.role == 'member' || isAdmin()
+      );
+      // Allow users to update their own profile (but not role), admins can update anything
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
+        (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      // Any authenticated user can create/update/delete projects for now
+      allow create: if isAuthenticated() && isValidProject(request.resource.data);
+      allow update: if isAuthenticated() && isValidProject(request.resource.data);
+      allow delete: if isAuthenticated();
+    }
+  }
+}

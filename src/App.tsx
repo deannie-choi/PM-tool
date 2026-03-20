@@ -302,10 +302,10 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
       >
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 rounded-xl bg-brand-dark text-brand-light flex items-center justify-center font-bold text-3xl shadow-sm">
-            T
+            HD
           </div>
         </div>
-        <h2 className="text-2xl font-bold text-center text-brand-dark mb-2">TransfoTrack</h2>
+        <h2 className="text-2xl font-bold text-center text-brand-dark mb-2">HD Hyundai Electric</h2>
         <p className="text-center text-brand-dark/80 mb-8 text-sm">
           {isLogin ? 'Sign in to your account' : 'Create a new account'}
         </p>

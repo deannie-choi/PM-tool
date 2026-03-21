@@ -565,6 +565,7 @@ export default function App() {
   const [filterCarrier, setFilterCarrier] = useState<string>('');
   const [filterContractor, setFilterContractor] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterPic, setFilterPic] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
@@ -691,6 +692,7 @@ export default function App() {
       const matchId = p.id.toLowerCase().includes(query);
       if (!matchName && !matchId) return false;
     }
+    if (filterPic && p.assignedTo !== filterPic) return false;
     if (filterCustomer && p.customer !== filterCustomer) return false;
     if (filterStatus && getComputedCurrentStage(p) !== filterStatus) return false;
     if (activeTab !== 'payments') {
@@ -704,6 +706,7 @@ export default function App() {
   const uniqueCarriers = Array.from(new Set(roleFilteredProjects.map(p => p.inlandTransport.carrier).filter(Boolean)));
   const uniqueContractors = Array.from(new Set(roleFilteredProjects.map(p => p.installation.contractor).filter(Boolean)));
   const uniqueStatuses = Array.from(new Set(roleFilteredProjects.map(p => getComputedCurrentStage(p)))).sort();
+  const uniquePICs = Array.from(new Set(roleFilteredProjects.map(p => p.assignedTo).filter(Boolean))) as string[];
   const allCustomers = Array.from(new Set(projects.map(p => p.customer).filter(Boolean))) as string[];
 
   if (!isAuthReady) {
@@ -863,9 +866,21 @@ export default function App() {
                   <option value="">All Statuses</option>
                   {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                {(searchQuery || filterCustomer || filterStatus || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
+                {(currentUser?.role === 'leader' || currentUser?.role === 'admin') && (
+                  <select
+                    value={filterPic}
+                    onChange={e => setFilterPic(e.target.value)}
+                    className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                  >
+                    <option value="">All PICs</option>
+                    {uniquePICs.map(uid => (
+                      <option key={uid} value={uid}>{users.find(u => u.id === uid)?.name || 'Unknown'}</option>
+                    ))}
+                  </select>
+                )}
+                {(searchQuery || filterCustomer || filterStatus || filterPic || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
                   <button
-                    onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterStatus(''); setFilterCarrier(''); setFilterContractor(''); }}
+                    onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterStatus(''); setFilterCarrier(''); setFilterContractor(''); setFilterPic(''); }}
                     className="text-xs font-medium text-brand-secondary hover:text-brand-dark"
                   >
                     Clear Filters
@@ -888,11 +903,11 @@ export default function App() {
               ) : activeTab === 'dashboard' ? (
                 <Dashboard key="dashboard" projects={filteredProjects} onSelectProject={(p) => setSelectedProjectId(p.id)} />
               ) : activeTab === 'projects' ? (
-                <ProjectList key="list" projects={filteredProjects} onSelectProject={(p) => setSelectedProjectId(p.id)} />
+                <ProjectList key="list" projects={filteredProjects} users={users} onSelectProject={(p) => setSelectedProjectId(p.id)} />
               ) : activeTab === 'transportation' ? (
-                <TransportationView key="transportation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
+                <TransportationView key="transportation" projects={filteredProjects} users={users} onUpdateProject={handleUpdateProject} />
               ) : activeTab === 'installation' ? (
-                <InstallationView key="installation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
+                <InstallationView key="installation" projects={filteredProjects} users={users} onUpdateProject={handleUpdateProject} />
               ) : activeTab === 'sop' ? (
                 <SOPView key="sop" />
               ) : (
@@ -2000,7 +2015,7 @@ function CheckboxItem({ label, checked, isEditing, onChange }: any) {
   );
 }
 
-function ProjectList({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void, key?: string }) {
+function ProjectList({ projects, users, onSelectProject }: { projects: Project[], users: AppUser[], onSelectProject: (p: Project) => void, key?: string }) {
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const sortedProjects = useMemo(() => {
@@ -2063,12 +2078,12 @@ function ProjectList({ projects, onSelectProject }: { projects: Project[], onSel
           <thead>
             <tr className="border-b border-brand-dark/10 bg-brand-muted/10 text-xs font-bold uppercase tracking-wider text-brand-secondary">
               <th className="px-6 py-4 text-center w-16">#</th>
+              <th className="px-6 py-4 text-center w-24">PIC</th>
               <th className="px-6 py-4 text-center w-24">Type</th>
               <th className="px-6 py-4">SO#</th>
               <th className="px-6 py-4">Project Name</th>
               <th className="px-6 py-4">Customer</th>
               <th className="px-6 py-4">Carrier</th>
-              <th className="px-6 py-4">Serial #</th>
               <th className="px-6 py-4 cursor-pointer group hover:bg-brand-dark/5 transition-colors" onClick={() => requestSort('departure')}>
                 <div className="flex items-center gap-2">Departure {getSortIcon('departure')}</div>
               </th>
@@ -2095,6 +2110,9 @@ function ProjectList({ projects, onSelectProject }: { projects: Project[], onSel
                 className="hover:bg-brand-muted/15 cursor-pointer text-brand-dark transition-colors group text-[15px] font-medium"
               >
                 <td className="px-6 py-4 text-center text-brand-secondary">#{index + 1}</td>
+                <td className="px-6 py-4 text-center font-medium">
+                  {users.find(u => u.id === p.assignedTo)?.name || '-'}
+                </td>
                 <td className="px-6 py-4 text-center">
                   {p.unitType || '-'}
                 </td>
@@ -2109,16 +2127,6 @@ function ProjectList({ projects, onSelectProject }: { projects: Project[], onSel
                 </td>
                 <td className="px-6 py-4 max-w-[120px] truncate" title={p.inlandTransport.carrier}>
                   {p.inlandTransport.carrier || '-'}
-                </td>
-                <td className="px-6 py-4 max-w-[150px] truncate">
-                  {p.units && p.units.length > 1 ? (
-                    <div className="flex items-center gap-1.5" title={`${p.serialNumber || '-'} (+${p.units.length - 1} more)`}>
-                      <span className="truncate max-w-[100px]">{p.serialNumber || '-'}</span>
-                      <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-bold shrink-0">+{p.units.length - 1}</span>
-                    </div>
-                  ) : (
-                    <span className="truncate" title={p.serialNumber || '-'}>{p.serialNumber || '-'}</span>
-                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {(p.oceanFreight.atd && p.oceanFreight.atd !== '-') ? (
@@ -2819,7 +2827,7 @@ function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUp
   );
 }
 
-function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProject }: { carrier: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void, key?: string }) {
+function CarrierGroup({ carrier, projs, users, expandedId, setExpandedId, onUpdateProject }: { carrier: string, projs: Project[], users: AppUser[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void, key?: string }) {
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
 
   return (
@@ -2845,6 +2853,7 @@ function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProje
               <TransportationCard
                 key={p.id}
                 project={p}
+                users={users}
                 isExpanded={expandedId === p.id}
                 onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)}
                 onUpdate={onUpdateProject}
@@ -2857,7 +2866,7 @@ function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProje
   );
 }
 
-function TransportationView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void, key?: string }) {
+function TransportationView({ projects, users, onUpdateProject }: { projects: Project[], users: AppUser[], onUpdateProject: (p: Project) => void, key?: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const groupedProjects = projects.reduce((acc, p) => {
@@ -2887,6 +2896,7 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
             key={carrier}
             carrier={carrier}
             projs={projs}
+            users={users}
             expandedId={expandedId}
             setExpandedId={setExpandedId}
             onUpdateProject={onUpdateProject}
@@ -2899,7 +2909,7 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
 
 
 
-function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void, key?: string }) {
+function TransportationCard({ project, users, isExpanded, onToggle, onUpdate }: { project: Project, users: AppUser[], isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void, key?: string }) {
   const handleChange = (field: string, value: any, nestedObj?: 'oceanFreight' | 'inlandTransport' | 'installation') => {
     const updated = { ...project };
     if (nestedObj) {
@@ -2955,15 +2965,8 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
             <span className="text-sm text-brand-dark truncate" title={project.inlandTransport.carrier || '-'}>{project.inlandTransport.carrier || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Serial #</span>
-            {project.units && project.units.length > 1 ? (
-              <span className="text-sm text-brand-dark flex items-center gap-1.5" title={`${project.serialNumber || '-'} (+${project.units.length - 1} more)`}>
-                <span className="truncate max-w-[100px]">{project.serialNumber || '-'}</span>
-                <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-bold shrink-0">+{project.units.length - 1}</span>
-              </span>
-            ) : (
-              <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
-            )}
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">PIC</span>
+            <span className="text-sm font-medium text-brand-dark truncate">{users.find(u => u.id === project.assignedTo)?.name || '-'}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Departure</span>
@@ -3215,7 +3218,7 @@ function CheckboxField({ label, checked, onChange }: { label: string, checked: b
   );
 }
 
-function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdateProject }: { contractor: string, projs: Project[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void, key?: string }) {
+function ContractorGroup({ contractor, projs, users, expandedId, setExpandedId, onUpdateProject }: { contractor: string, projs: Project[], users: AppUser[], expandedId: string | null, setExpandedId: (id: string | null) => void, onUpdateProject: (p: Project) => void, key?: string }) {
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
 
   return (
@@ -3241,6 +3244,7 @@ function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdat
               <InstallationCard
                 key={p.id}
                 project={p}
+                users={users}
                 isExpanded={expandedId === p.id}
                 onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)}
                 onUpdate={onUpdateProject}
@@ -3253,7 +3257,7 @@ function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdat
   );
 }
 
-function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project: Project, isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void, key?: string }) {
+function InstallationCard({ project, users, isExpanded, onToggle, onUpdate }: { project: Project, users: AppUser[], isExpanded: boolean, onToggle: () => void, onUpdate: (p: Project) => void, key?: string }) {
   const handleChange = (field: string, value: any, nestedObj?: 'oceanFreight' | 'inlandTransport' | 'installation') => {
     const updated = { ...project };
     if (nestedObj) {
@@ -3296,15 +3300,8 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
             <span className="text-sm text-brand-dark truncate" title={project.installation.contractor || '-'}>{project.installation.contractor || '-'}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Serial #</span>
-            {project.units && project.units.length > 1 ? (
-              <span className="text-sm text-brand-dark flex items-center gap-1.5" title={`${project.serialNumber || '-'} (+${project.units.length - 1} more)`}>
-                <span className="truncate max-w-[100px]">{project.serialNumber || '-'}</span>
-                <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-bold shrink-0">+{project.units.length - 1}</span>
-              </span>
-            ) : (
-              <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
-            )}
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">PIC</span>
+            <span className="text-sm font-medium text-brand-dark truncate">{users.find(u => u.id === project.assignedTo)?.name || '-'}</span>
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Start Date</span>
@@ -3369,7 +3366,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
   );
 }
 
-function InstallationView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void, key?: string }) {
+function InstallationView({ projects, users, onUpdateProject }: { projects: Project[], users: AppUser[], onUpdateProject: (p: Project) => void, key?: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const groupedProjects = projects.reduce((acc, p) => {
@@ -3399,6 +3396,7 @@ function InstallationView({ projects, onUpdateProject }: { projects: Project[], 
             key={contractor}
             contractor={contractor}
             projs={projs}
+            users={users}
             expandedId={expandedId}
             setExpandedId={setExpandedId}
             onUpdateProject={onUpdateProject}

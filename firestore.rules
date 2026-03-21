@@ -37,10 +37,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      // Allow user to create their own profile, but only as 'member' unless they are admin
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (
-        request.resource.data.role == 'member' || isAdmin()
-      );
+      // Allow user to create their own profile with any valid role during the testing phase
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data);
       // Allow users to update their own profile (but not role), admins can update anything
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
         (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin()

@@ -775,7 +775,7 @@ export default function App() {
             Settings
           </button>
           <button
-            onClick={() => { setCurrentUser(null); setSelectedProjectId(null); }}
+            onClick={() => { signOut(auth); setCurrentUser(null); setSelectedProjectId(null); }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
           >
             <LogOut size={20} />

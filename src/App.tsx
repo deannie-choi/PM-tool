@@ -5,8 +5,8 @@ import {
   ChevronRight, Plus, MoreVertical, MapPin, Calendar,
   ArrowLeft, Edit3, Sparkles, FileText, Activity,
   Check, Factory, PlayCircle, Save, X, Trash2, Filter,
-  LogOut, User, ChevronDown, CreditCard, Building2, DollarSign,
-  Network, BookOpen, GitBranch, AlertTriangle
+  LogOut, User, ChevronDown, ChevronUp, CreditCard, Building2, DollarSign,
+  Network, BookOpen, GitBranch, AlertTriangle, ArrowUpDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SOPView } from './components/SOPView';
@@ -154,6 +154,7 @@ interface Project {
     transitTime?: string;
     port?: string;
     siteContact?: string;
+    siteAddress?: string;
     railcarNumber?: string;
     siteVisitReport?: boolean;
     loadingDrawing?: boolean;
@@ -563,6 +564,7 @@ export default function App() {
   const [filterCustomer, setFilterCustomer] = useState<string>('');
   const [filterCarrier, setFilterCarrier] = useState<string>('');
   const [filterContractor, setFilterContractor] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
@@ -690,6 +692,7 @@ export default function App() {
       if (!matchName && !matchId) return false;
     }
     if (filterCustomer && p.customer !== filterCustomer) return false;
+    if (filterStatus && getComputedCurrentStage(p) !== filterStatus) return false;
     if (activeTab !== 'payments') {
       if (filterCarrier && p.inlandTransport.carrier !== filterCarrier) return false;
       if (filterContractor && p.installation.contractor !== filterContractor) return false;
@@ -700,6 +703,7 @@ export default function App() {
   const uniqueCustomers = Array.from(new Set(roleFilteredProjects.map(p => p.customer).filter(Boolean)));
   const uniqueCarriers = Array.from(new Set(roleFilteredProjects.map(p => p.inlandTransport.carrier).filter(Boolean)));
   const uniqueContractors = Array.from(new Set(roleFilteredProjects.map(p => p.installation.contractor).filter(Boolean)));
+  const uniqueStatuses = Array.from(new Set(roleFilteredProjects.map(p => getComputedCurrentStage(p)))).sort();
   const allCustomers = Array.from(new Set(projects.map(p => p.customer).filter(Boolean))) as string[];
 
   if (!isAuthReady) {
@@ -851,9 +855,17 @@ export default function App() {
                     )}
                   </>
                 )}
-                {(searchQuery || filterCustomer || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                >
+                  <option value="">All Statuses</option>
+                  {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {(searchQuery || filterCustomer || filterStatus || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
                   <button
-                    onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterCarrier(''); setFilterContractor(''); }}
+                    onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterStatus(''); setFilterCarrier(''); setFilterContractor(''); }}
                     className="text-xs font-medium text-brand-secondary hover:text-brand-dark"
                   >
                     Clear Filters
@@ -989,7 +1001,7 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
               {/* Stage Info */}
               <div className="flex flex-col gap-1 min-w-[150px]">
                 <span className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Current Stage</span>
-                <span className="font-semibold text-brand-dark">{project.currentStage}</span>
+                <span className="font-semibold text-brand-dark">{getComputedCurrentStage(project)}</span>
               </div>
 
               {/* Date Info */}
@@ -1046,13 +1058,114 @@ function EditableText({ isEditing, value, onChange, className = "", placeholder 
 }
 
 function EditableDate({ isEditing, value, onChange, className = "" }: any) {
-  if (!isEditing) return <span className={className}>{value}</span>;
+  const displayValue = useMemo(() => {
+    if (!value || value === '-') return '';
+    if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [y, m, d] = value.split('-');
+      return `${m}/${d}/${y}`;
+    }
+    return value;
+  }, [value]);
+
+  const [localValue, setLocalValue] = useState('');
+
+  useEffect(() => {
+    setLocalValue(displayValue);
+  }, [displayValue]);
+
+  if (!isEditing) {
+    return (
+      <input
+        type="text"
+        readOnly
+        value={displayValue || '-'}
+        className={`w-full py-0 bg-transparent border border-transparent rounded-lg text-brand-dark text-[15px] font-medium outline-none cursor-text selection:bg-brand-dark/20 ${className}`}
+      />
+    );
+  }
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value.replace(/[^0-9]/g, '');
+    if (raw.length > 8) raw = raw.slice(0, 8);
+
+    let masked = '';
+    if (raw.length > 2) masked += raw.slice(0, 2) + '/';
+    else masked += raw;
+
+    if (raw.length > 4) masked += raw.slice(2, 4) + '/';
+    else if (raw.length > 2) masked += raw.slice(2);
+
+    if (raw.length > 4) masked += raw.slice(4);
+
+    if (masked.length >= 2) {
+      let mm = parseInt(masked.slice(0, 2), 10);
+      if (mm > 12) masked = '12' + masked.slice(2);
+      if (mm === 0 && raw.length >= 2) masked = '01' + masked.slice(2);
+    }
+    if (masked.length >= 5) {
+      let dd = parseInt(masked.slice(3, 5), 10);
+      if (dd > 31) masked = masked.slice(0, 3) + '31' + masked.slice(5);
+      if (dd === 0 && raw.length >= 4) masked = masked.slice(0, 3) + '01' + masked.slice(5);
+    }
+
+    setLocalValue(masked);
+
+    if (raw.length === 8) {
+      const m = raw.slice(0, 2);
+      const d = raw.slice(2, 4);
+      const y = raw.slice(4, 8);
+      onChange(`${y}-${m}-${d}`);
+    } else if (raw.length === 0) {
+      onChange('-');
+    } else {
+      onChange(masked);
+    }
+  };
+
+  return (
+    <div className={`relative flex items-center w-full ${className}`}>
+      <input
+        type="text"
+        placeholder="MM/DD/YYYY"
+        value={localValue}
+        onChange={handleDateChange}
+        className="w-full pl-3 pr-8 py-1.5 bg-white border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all placeholder:text-brand-dark/30 tracking-wider"
+      />
+      <input
+        type="date"
+        value={value === '-' ? '' : value}
+        onChange={(e) => {
+          if (e.target.value) {
+            onChange(e.target.value);
+          } else {
+            onChange('-');
+          }
+        }}
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 opacity-0 cursor-pointer z-10"
+        style={{ colorScheme: 'light' }}
+      />
+      <Calendar size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-secondary pointer-events-none" />
+    </div>
+  );
+}
+
+function MaskedTimeInput({ isEditing, value, onChange, className = "" }: any) {
+  if (!isEditing) {
+    return (
+      <input
+        type="text"
+        readOnly
+        value={value}
+        className={`px-3 py-1.5 bg-transparent border border-transparent rounded-lg text-brand-dark text-[15px] font-medium outline-none cursor-text selection:bg-brand-dark/20 text-center ${className}`}
+      />
+    );
+  }
   return (
     <input
-      type="date"
+      type="time"
       value={value === '-' ? '' : value}
       onChange={e => onChange(e.target.value || '-')}
-      className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`}
+      className={`px-3 py-1.5 bg-white border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] font-medium focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all tracking-wider text-center ${className}`}
     />
   );
 }
@@ -1260,11 +1373,11 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               )}
             </div>
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 text-brand-dark/80 text-[15px] mb-5">
-              <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-[180px]">
+              <div className={`flex items-center gap-2 flex-1 sm:flex-none ${isEditing ? 'min-w-[180px]' : ''}`}>
                 <EditableCombobox isEditing={isEditing} value={editData.customer} onChange={(v: string) => updateField(['customer'], v)} placeholder="Customer" options={allCustomers} />
               </div>
               <span className="hidden sm:inline text-brand-dark/30">•</span>
-              <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-[180px]">
+              <div className={`flex items-center gap-2 flex-1 sm:flex-none ${isEditing ? 'min-w-[180px]' : ''}`}>
                 <User size={16} className="shrink-0" />
                 {isEditing && currentUser.role === 'leader' ? (
                   <div className="relative w-full">
@@ -1289,10 +1402,10 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-brand-dark/70 uppercase tracking-wider">Transformer Units</span>
                 {isEditing && (
-                  <button 
+                  <button
                     onClick={() => {
                       const currentUnits = editData.units && editData.units.length > 0
-                        ? editData.units 
+                        ? editData.units
                         : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }];
                       updateField(['units'], [...currentUnits, { serialNumber: '', drawingNumber: '' }]);
                     }}
@@ -1302,7 +1415,7 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                   </button>
                 )}
               </div>
-              
+
               <div className="flex flex-col gap-3">
                 {(editData.units && editData.units.length > 0 ? editData.units : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }]).map((unit, idx) => (
                   <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 relative group">
@@ -1310,16 +1423,16 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                       <Factory size={16} className="text-brand-secondary shrink-0" />
                       <span className="shrink-0 whitespace-nowrap">SERIAL# <span className="text-xs text-brand-secondary">({idx + 1})</span>:</span>
                       <div className="flex-1 min-w-0">
-                        <EditableText 
-                          isEditing={isEditing} 
-                          value={unit.serialNumber} 
+                        <EditableText
+                          isEditing={isEditing}
+                          value={unit.serialNumber}
                           onChange={(v: string) => {
                             if (idx === 0) updateField(['serialNumber'], v);
                             const newUnits = [...(editData.units && editData.units.length > 0 ? editData.units : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }])];
                             newUnits[idx] = { ...newUnits[idx], serialNumber: v };
                             updateField(['units'], newUnits);
-                          }} 
-                          className="text-brand-dark font-bold w-full" 
+                          }}
+                          className="text-brand-dark font-bold w-full"
                         />
                       </div>
                     </div>
@@ -1327,21 +1440,21 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                       <FileText size={16} className="text-brand-secondary shrink-0" />
                       <span className="shrink-0 whitespace-nowrap">DRAWING# <span className="text-xs text-brand-secondary">({idx + 1})</span>:</span>
                       <div className="flex-1 min-w-0">
-                        <EditableText 
-                          isEditing={isEditing} 
-                          value={unit.drawingNumber} 
+                        <EditableText
+                          isEditing={isEditing}
+                          value={unit.drawingNumber}
                           onChange={(v: string) => {
                             if (idx === 0) updateField(['drawingNumber'], v);
                             const newUnits = [...(editData.units && editData.units.length > 0 ? editData.units : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }])];
                             newUnits[idx] = { ...newUnits[idx], drawingNumber: v };
                             updateField(['units'], newUnits);
-                          }} 
-                          className="text-brand-dark font-bold w-full" 
+                          }}
+                          className="text-brand-dark font-bold w-full"
                         />
                       </div>
                     </div>
                     {isEditing && (editData.units ? editData.units.length : 1) > 1 && (
-                      <button 
+                      <button
                         onClick={() => {
                           const newUnits = [...(editData.units || [])];
                           newUnits.splice(idx, 1);
@@ -1399,11 +1512,11 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
           <div className="relative">
             <div className="absolute top-1/2 left-12 right-12 h-0.5 bg-brand-dark/10 -translate-y-1/2 -z-0" />
             <div className="flex justify-between relative z-10">
-              <StepIndicator title="Manufacturing" icon={Factory} status={getStepStatus('Manufacturing', editData.currentStage)} />
-              <StepIndicator title="Ocean Freight" icon={Ship} status={getStepStatus('Ocean Freight', editData.currentStage)} date={formatDateRange(getBestDate(editData.oceanFreight.atd, editData.oceanFreight.etd), getBestDate(editData.oceanFreight.ata, editData.oceanFreight.eta))} />
-              <StepIndicator title="Inland Transport" icon={Truck} status={getStepStatus('Inland Transport', editData.currentStage)} date={formatDateRange(getBestDate(editData.inlandTransport.atd, editData.inlandTransport.etd), getBestDate(editData.inlandTransport.ata, editData.inlandTransport.eta))} />
-              <StepIndicator title="Installation" icon={Wrench} status={getStepStatus('Installation', editData.currentStage)} date={formatDateRange(editData.installation.startDate, editData.installation.endDate)} />
-              <StepIndicator title="Commissioning" icon={PlayCircle} status={getStepStatus('Commissioning', editData.currentStage)} />
+              <StepIndicator title="Manufacturing" icon={Factory} status={getStepStatus('Manufacturing', editData)} />
+              <StepIndicator title="Ocean Freight" icon={Ship} status={getStepStatus('Ocean Freight', editData)} date={formatDateRange(getBestDate(editData.oceanFreight.atd, editData.oceanFreight.etd), getBestDate(editData.oceanFreight.ata, editData.oceanFreight.eta))} />
+              <StepIndicator title="Inland Transport" icon={Truck} status={getStepStatus('Inland Transport', editData)} date={formatDateRange(getBestDate(editData.inlandTransport.atd, editData.inlandTransport.etd), getBestDate(editData.inlandTransport.ata, editData.inlandTransport.eta))} />
+              <StepIndicator title="Installation" icon={Wrench} status={getStepStatus('Installation', editData)} date={formatDateRange(editData.installation.startDate, editData.installation.endDate)} />
+              <StepIndicator title="Commissioning" icon={PlayCircle} status={getStepStatus('Commissioning', editData)} />
             </div>
           </div>
         </div>
@@ -1438,8 +1551,8 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
               <div className="space-y-6">
                 {/* Top 4 Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <InfoCard label="ORIGIN" value={editData.origin} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['origin'], v)} />
-                  <InfoCard label="DESTINATION" value={editData.destination} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['destination'], v)} />
+                  <InfoCard label="Departing Port" value={editData.origin} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['origin'], v)} />
+                  <InfoCard label="Arriving Port" value={editData.destination} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['destination'], v)} />
                   <InfoCard label="START DATE" value={editData.startDate} icon={Calendar} isEditing={isEditing} onChange={(v: string) => updateField(['startDate'], v)} type="date" />
                   <InfoCard label="EST. FINAL DELIVERY" value={editData.estFinalDelivery} icon={Calendar} isEditing={isEditing} onChange={(v: string) => updateField(['estFinalDelivery'], v)} type="date" />
                 </div>
@@ -1546,20 +1659,37 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                       <CheckboxItem label="Road Permit" checked={editData.inlandTransport.roadPermit} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'roadPermit'], v)} />
                       <CheckboxItem label="POD Received" checked={editData.inlandTransport.podReceived} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'podReceived'], v)} />
                     </div>
-                    <div className="pt-4 mt-4 border-t border-brand-dark/5">
-                      <div className="text-xs text-brand-secondary mb-1">Site Contact</div>
-                      {isEditing ? (
-                        <textarea
-                          value={editData.inlandTransport.siteContact || ''}
-                          onChange={(e) => updateField(['inlandTransport', 'siteContact'], e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
-                          placeholder="Enter site contact details (multiple contacts allowed)..."
-                        />
-                      ) : (
-                        <div className="text-sm text-brand-dark whitespace-pre-wrap">
-                          {editData.inlandTransport.siteContact || '-'}
-                        </div>
-                      )}
+                    <div className="pt-4 mt-4 border-t border-brand-dark/5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <div className="text-xs text-brand-secondary mb-1">Site Address</div>
+                        {isEditing ? (
+                          <textarea
+                            value={editData.inlandTransport.siteAddress || ''}
+                            onChange={(e) => updateField(['inlandTransport', 'siteAddress'], e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
+                            placeholder="Enter site address..."
+                          />
+                        ) : (
+                          <div className="text-sm text-brand-dark whitespace-pre-wrap">
+                            {editData.inlandTransport.siteAddress || '-'}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs text-brand-secondary mb-1">Site Contact</div>
+                        {isEditing ? (
+                          <textarea
+                            value={editData.inlandTransport.siteContact || ''}
+                            onChange={(e) => updateField(['inlandTransport', 'siteContact'], e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
+                            placeholder="Enter site contact details (multiple contacts allowed)..."
+                          />
+                        ) : (
+                          <div className="text-sm text-brand-dark whitespace-pre-wrap">
+                            {editData.inlandTransport.siteContact || '-'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1592,37 +1722,53 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Oil Delivery Schedule</div>
                         <div className="text-xs text-brand-dark/80 flex items-center gap-2">
-                          Total Req: <EditableText isEditing={isEditing} value={editData.installation.oilTotalReq} onChange={(v: string) => updateField(['installation', 'oilTotalReq'], v)} className="font-bold text-brand-dark w-24" />
+                          <span className="font-bold uppercase tracking-wider text-brand-dark">Total Req:</span>
+                          {isEditing ? (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                value={editData.installation.oilTotalReq ? Number(editData.installation.oilTotalReq.replace(/[^0-9]/g, '')).toLocaleString() : ''}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^0-9]/g, '');
+                                  const formatted = val ? Number(val).toLocaleString() : '';
+                                  updateField(['installation', 'oilTotalReq'], formatted);
+                                }}
+                                className="w-24 px-2 py-1 bg-white border border-brand-secondary/30 rounded-md text-brand-dark font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-dark/30 placeholder:font-normal placeholder:text-brand-dark/30"
+                                placeholder="0"
+                              />
+                              <span className="font-bold text-brand-dark/80">Gallons</span>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-brand-dark bg-brand-muted/15 px-2 py-1 rounded-md border border-brand-dark/5">{editData.installation.oilTotalReq ? Number(editData.installation.oilTotalReq.replace(/[^0-9]/g, '')).toLocaleString() : '0'} Gallons</span>
+                          )}
                         </div>
                       </div>
-                      <div className="space-y-2 mb-4">
+                      <div className="space-y-2 mb-4 w-full">
                         {editData.installation.oilDeliveries.map((delivery, i) => (
-                          <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-brand-muted/15 rounded-lg border border-brand-dark/5 text-sm gap-2">
-                            <div className="font-medium text-brand-dark/80 w-24 shrink-0">{getDeliveryLabel(i)}</div>
-                            <div className="flex items-center gap-4 text-brand-dark/80">
-                              <span className="flex items-center gap-1">
-                                <Calendar size={14} />
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-start p-3 bg-brand-muted/15 rounded-xl border border-brand-dark/5 text-sm gap-6 group w-full">
+                            <div className="font-bold text-brand-dark/80 w-28 shrink-0">{getDeliveryLabel(i)}</div>
+                            <div className="flex flex-wrap sm:flex-nowrap items-center text-brand-dark/80 flex-1">
+                              <div className={`flex items-center gap-1.5 shrink-0 transition-all ${isEditing ? 'bg-white border border-brand-secondary/30 px-2 py-1 rounded-lg' : ''}`}>
                                 <EditableDate isEditing={isEditing} value={delivery.date} onChange={(v: string) => {
                                   const newDel = [...editData.installation.oilDeliveries];
                                   newDel[i].date = v;
                                   updateField(['installation', 'oilDeliveries'], newDel);
-                                }} />
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock size={14} />
-                                <EditableText isEditing={isEditing} value={delivery.time} onChange={(v: string) => {
+                                }} className={`font-medium w-[125px] ${isEditing ? '!border-none !bg-transparent !py-0 !px-0 rounded-none shadow-none' : ''}`} />
+                                <div className={`w-[1.5px] h-4 bg-brand-secondary/30 mx-1 ${isEditing ? '' : 'hidden'}`} />
+                                <Clock size={14} className={`shrink-0 text-brand-secondary ${isEditing ? '' : 'ml-2'}`} />
+                                <MaskedTimeInput isEditing={isEditing} value={delivery.time} onChange={(v: string) => {
                                   const newDel = [...editData.installation.oilDeliveries];
                                   newDel[i].time = v;
                                   updateField(['installation', 'oilDeliveries'], newDel);
-                                }} className="w-20" />
-                              </span>
+                                }} className={`w-[75px] ${isEditing ? '!border-none !bg-transparent !py-0 !px-0 rounded-none shadow-none' : ''}`} />
+                              </div>
                               {isEditing && (
                                 <button
                                   onClick={() => {
                                     const newDel = editData.installation.oilDeliveries.filter((_, idx) => idx !== i);
                                     updateField(['installation', 'oilDeliveries'], newDel);
                                   }}
-                                  className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 transition-colors"
+                                  className="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-lg transition-colors ml-2 shrink-0 border border-transparent hover:border-red-600 shadow-sm opacity-50 hover:opacity-100 focus:opacity-100"
                                 >
                                   <X size={14} />
                                 </button>
@@ -1720,13 +1866,69 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
 // Helpers
 const STAGES: Stage[] = ['Manufacturing', 'Ocean Freight', 'Inland Transport', 'Installation', 'Commissioning'];
 
-function getStepStatus(step: Stage, currentStage: Stage): 'completed' | 'active' | 'pending' {
-  const currentIndex = STAGES.indexOf(currentStage);
+function getStepStatus(step: Stage, project: any): 'completed' | 'active' | 'pending' {
+  const isDateSet = (d: string | undefined | null) => d && d !== '-';
+  const isPastOrToday = (d: string | undefined | null) => {
+    if (!isDateSet(d)) return false;
+    const target = new Date(d as string);
+    if (isNaN(target.getTime())) return false;
+    target.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return target.getTime() <= today.getTime();
+  };
+  const isPast = (d: string | undefined | null) => {
+    if (!isDateSet(d)) return false;
+    const target = new Date(d as string);
+    if (isNaN(target.getTime())) return false;
+    target.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return target.getTime() < today.getTime();
+  };
+  if (step === 'Manufacturing') {
+    if (isDateSet(project.oceanFreight?.ata)) return 'completed';
+    return 'active';
+  }
+
+  if (step === 'Ocean Freight') {
+    if (isDateSet(project.oceanFreight?.ata) && isPast(project.oceanFreight?.ata)) return 'completed';
+    if (isDateSet(project.oceanFreight?.atd)) return 'active';
+    return 'pending';
+  }
+
+  if (step === 'Inland Transport') {
+    if (isDateSet(project.inlandTransport?.atd) && isDateSet(project.inlandTransport?.ata) && project.inlandTransport?.podReceived) return 'completed';
+    if (isDateSet(project.inlandTransport?.atd)) return 'active';
+    return 'pending';
+  }
+
+  if (step === 'Installation') {
+    if (isDateSet(project.installation?.endDate) && isPast(project.installation?.endDate)) return 'completed';
+    if (isDateSet(project.installation?.startDate) && isPastOrToday(project.installation?.startDate)) return 'active';
+    return 'pending';
+  }
+
+  // Fallback for Manufacturing and Commissioning using legacy currentStage
+  const currentIndex = STAGES.indexOf(project.currentStage || 'Manufacturing');
   const stepIndex = STAGES.indexOf(step);
 
   if (stepIndex < currentIndex) return 'completed';
   if (stepIndex === currentIndex) return 'active';
   return 'pending';
+}
+
+function getComputedCurrentStage(project: any): Stage {
+  // Determine highest stage reached by querying our date-driven matrix backwards
+  for (let i = STAGES.length - 1; i >= 0; i--) {
+    const stage = STAGES[i];
+    const status = getStepStatus(stage, project);
+    if (status === 'active') return stage;
+    if (status === 'completed') {
+      return i < STAGES.length - 1 ? STAGES[i + 1] : stage;
+    }
+  }
+  return 'Manufacturing';
 }
 
 function StepIndicator({ title, icon: Icon, status, date }: { title: string, icon: any, status: 'completed' | 'active' | 'pending', date?: string }) {
@@ -1799,6 +2001,60 @@ function CheckboxItem({ label, checked, isEditing, onChange }: any) {
 }
 
 function ProjectList({ projects, onSelectProject }: { projects: Project[], onSelectProject: (p: Project) => void, key?: string }) {
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const sortedProjects = useMemo(() => {
+    let sortableItems = [...projects];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = '';
+        let bValue = '';
+
+        const getVal = (p: Project, key: string) => {
+          switch (key) {
+            case 'departure': return (p.oceanFreight.atd && p.oceanFreight.atd !== '-') ? p.oceanFreight.atd : (p.oceanFreight.etd || '');
+            case 'arrival': return (p.oceanFreight.ata && p.oceanFreight.ata !== '-') ? p.oceanFreight.ata : (p.oceanFreight.eta || '');
+            case 'cif': return p.oceanFreight.cifDate || '';
+            case 'ddp': return p.inlandTransport.ddpDate || '';
+            case 'siteEta':
+              const ata = p.inlandTransport.ata;
+              const eta = p.inlandTransport.eta;
+              return (ata && ata !== '-') ? ata : (eta && eta !== '-' ? eta : '');
+            default: return '';
+          }
+        };
+
+        aValue = getVal(a, sortConfig.key);
+        bValue = getVal(b, sortConfig.key);
+
+        if (!aValue || aValue === '-') aValue = sortConfig.direction === 'asc' ? '9999-99-99' : '0000-00-00';
+        if (!bValue || bValue === '-') bValue = sortConfig.direction === 'asc' ? '9999-99-99' : '0000-00-00';
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [projects, sortConfig]);
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+    else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+      setSortConfig(null);
+      return;
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown size={14} className="opacity-30 group-hover:opacity-100 transition-opacity" />;
+    }
+    return sortConfig.direction === 'asc' ? <ChevronUp size={14} className="text-brand-primary" /> : <ChevronDown size={14} className="text-brand-primary" />;
+  };
+
   return (
     <div className="w-full mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-brand-dark">All Projects</h2>
@@ -1809,35 +2065,104 @@ function ProjectList({ projects, onSelectProject }: { projects: Project[], onSel
               <th className="px-6 py-4 text-center w-16">#</th>
               <th className="px-6 py-4 text-center w-24">Type</th>
               <th className="px-6 py-4">SO#</th>
+              <th className="px-6 py-4">Project Name</th>
               <th className="px-6 py-4">Customer</th>
-              <th className="px-6 py-4 w-full">Project Name</th>
+              <th className="px-6 py-4">Carrier</th>
+              <th className="px-6 py-4">Serial #</th>
+              <th className="px-6 py-4 cursor-pointer group hover:bg-brand-dark/5 transition-colors" onClick={() => requestSort('departure')}>
+                <div className="flex items-center gap-2">Departure {getSortIcon('departure')}</div>
+              </th>
+              <th className="px-6 py-4 cursor-pointer group hover:bg-brand-dark/5 transition-colors" onClick={() => requestSort('arrival')}>
+                <div className="flex items-center gap-2">Arrival {getSortIcon('arrival')}</div>
+              </th>
+              <th className="px-6 py-4 cursor-pointer group hover:bg-brand-dark/5 transition-colors" onClick={() => requestSort('cif')}>
+                <div className="flex items-center gap-2">CIF Date {getSortIcon('cif')}</div>
+              </th>
+              <th className="px-6 py-4 cursor-pointer group hover:bg-brand-dark/5 transition-colors" onClick={() => requestSort('ddp')}>
+                <div className="flex items-center gap-2">DDP Date {getSortIcon('ddp')}</div>
+              </th>
+              <th className="px-6 py-4 cursor-pointer group hover:bg-brand-dark/5 transition-colors" onClick={() => requestSort('siteEta')}>
+                <div className="flex items-center gap-2">Site ETA {getSortIcon('siteEta')}</div>
+              </th>
+              <th className="px-6 py-4">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-dark/5">
-            {projects.map((p, index) => (
-              <tr 
-                key={p.id} 
-                onClick={() => onSelectProject(p)} 
+            {sortedProjects.map((p, index) => (
+              <tr
+                key={p.id}
+                onClick={() => onSelectProject(p)}
                 className="hover:bg-brand-muted/15 cursor-pointer text-brand-dark transition-colors group text-[15px] font-medium"
               >
                 <td className="px-6 py-4 text-center text-brand-secondary">#{index + 1}</td>
                 <td className="px-6 py-4 text-center">
                   {p.unitType || '-'}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 whitespace-nowrap">
                   {p.id}
                 </td>
-                <td className="px-6 py-4 max-w-[200px] xl:max-w-[400px] truncate" title={p.customer}>
+                <td className="px-6 py-4 max-w-[200px] truncate" title={p.name}>
+                  {p.name}
+                </td>
+                <td className="px-6 py-4 max-w-[150px] truncate" title={p.customer}>
                   {p.customer}
                 </td>
-                <td className="px-6 py-4 max-w-[250px] xl:max-w-[500px] truncate" title={p.name}>
-                  {p.name}
+                <td className="px-6 py-4 max-w-[120px] truncate" title={p.inlandTransport.carrier}>
+                  {p.inlandTransport.carrier || '-'}
+                </td>
+                <td className="px-6 py-4 max-w-[150px] truncate">
+                  {p.units && p.units.length > 1 ? (
+                    <div className="flex items-center gap-1.5" title={`${p.serialNumber || '-'} (+${p.units.length - 1} more)`}>
+                      <span className="truncate max-w-[100px]">{p.serialNumber || '-'}</span>
+                      <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-bold shrink-0">+{p.units.length - 1}</span>
+                    </div>
+                  ) : (
+                    <span className="truncate" title={p.serialNumber || '-'}>{p.serialNumber || '-'}</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {(p.oceanFreight.atd && p.oceanFreight.atd !== '-') ? (
+                    <span className="text-emerald-600 font-medium">{p.oceanFreight.atd} (A)</span>
+                  ) : (
+                    <span>{p.oceanFreight.etd || '-'} (E)</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {(p.oceanFreight.ata && p.oceanFreight.ata !== '-') ? (
+                    <span className="text-emerald-600 font-medium">{p.oceanFreight.ata} (A)</span>
+                  ) : (
+                    <span>{p.oceanFreight.eta || '-'} (E)</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {p.oceanFreight.cifDate || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {p.inlandTransport.ddpDate || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {(() => {
+                    const eta = p.inlandTransport.eta;
+                    const ddp = p.inlandTransport.ddpDate;
+                    if (!eta || eta === '-') return '-';
+                    const isLate = ddp && ddp !== '-' && eta > ddp;
+                    return (
+                      <span className={isLate ? "text-red-600 font-bold" : ""}>
+                        {eta}
+                      </span>
+                    );
+                  })()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark inline-block">
+                    {getComputedCurrentStage(p)}
+                  </span>
                 </td>
               </tr>
             ))}
             {projects.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-brand-secondary text-sm">
+                <td colSpan={13} className="px-6 py-8 text-center text-brand-secondary text-sm">
                   No projects found.
                 </td>
               </tr>
@@ -2612,7 +2937,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
         className="p-4 flex items-center justify-between cursor-pointer hover:bg-brand-muted/15"
         onClick={onToggle}
       >
-        <div className="flex-1 grid grid-cols-9 gap-4 items-center mr-4 py-2">
+        <div className="flex-1 grid grid-cols-11 gap-3 items-center mr-4 py-2">
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">SO#</span>
             <span className="text-sm font-bold text-brand-dark truncate">{project.id}</span>
@@ -2665,13 +2990,51 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
             <span className="text-sm text-brand-dark font-medium truncate">{project.oceanFreight.cifDate || '-'}</span>
           </div>
           <div className="flex flex-col">
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Inland Dep.</span>
+            <span className="text-sm text-brand-dark truncate">
+              {(() => {
+                const atd = project.inlandTransport.atd;
+                const etd = project.inlandTransport.etd;
+                const ddp = project.inlandTransport.ddpDate;
+                const displayDate = (atd && atd !== '-') ? atd : (etd && etd !== '-' ? etd : '');
+                const isAtd = (atd && atd !== '-');
+                if (!displayDate) return <span>-</span>;
+                const isLate = ddp && ddp !== '-' && displayDate > ddp;
+                return (
+                  <span className={`${isLate ? "text-red-600 font-bold" : (isAtd ? "text-emerald-600 font-medium" : "")}`}>
+                    {displayDate} {isAtd ? '(A)' : '(E)'}
+                  </span>
+                );
+              })()}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Inland Arr.</span>
+            <span className="text-sm text-brand-dark truncate">
+              {(() => {
+                const ata = project.inlandTransport.ata;
+                const eta = project.inlandTransport.eta;
+                const ddp = project.inlandTransport.ddpDate;
+                const displayDate = (ata && ata !== '-') ? ata : (eta && eta !== '-' ? eta : '');
+                const isAta = (ata && ata !== '-');
+                if (!displayDate) return <span>-</span>;
+                const isLate = ddp && ddp !== '-' && displayDate > ddp;
+                return (
+                  <span className={`${isLate ? "text-red-600 font-bold" : (isAta ? "text-emerald-600 font-medium" : "")}`}>
+                    {displayDate} {isAta ? '(A)' : '(E)'}
+                  </span>
+                );
+              })()}
+            </span>
+          </div>
+          <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">DDP Date</span>
             <span className="text-sm text-brand-dark font-medium truncate">{project.inlandTransport.ddpDate || '-'}</span>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark">
-            {project.currentStage}
+            {getComputedCurrentStage(project)}
           </span>
           <ChevronDown className={`text-brand-secondary transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
@@ -2696,6 +3059,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
                   <Field label="Project" value={project.name || ''} onChange={(v) => handleChange('name', v)} />
                   <Field label="KV" value={project.kv || ''} onChange={(v) => handleChange('kv', v)} />
                   <Field label="MVA" value={project.mva || ''} onChange={(v) => handleChange('mva', v)} />
+                  <TextAreaField label="Site Address" value={project.inlandTransport.siteAddress || ''} onChange={(v) => handleChange('siteAddress', v, 'inlandTransport')} />
                   <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
                 </div>
 
@@ -2953,7 +3317,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
         </div>
         <div className="flex items-center gap-4">
           <span className="px-3 py-1 bg-brand-dark/10 rounded-full text-xs font-bold text-brand-dark">
-            {project.currentStage}
+            {getComputedCurrentStage(project)}
           </span>
           <ChevronDown className={`text-brand-secondary transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
@@ -2982,6 +3346,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
                 <Field label="Site Address" value={project.destination || ''} onChange={(v) => handleChange('destination', v)} />
               </div>
 
+              <TextAreaField label="Site Address" value={project.inlandTransport.siteAddress || ''} onChange={(v) => handleChange('siteAddress', v, 'inlandTransport')} />
               <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
 
               <div className="space-y-3 pt-2">

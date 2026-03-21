@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useId, useRef, useCallback, useMemo } from 'react';
-import { 
-  Ship, Truck, Wrench, LayoutDashboard, FolderKanban, 
+import {
+  Ship, Truck, Wrench, LayoutDashboard, FolderKanban,
   Settings, Bell, Search, CheckCircle2, Circle, Clock,
   ChevronRight, Plus, MoreVertical, MapPin, Calendar,
   ArrowLeft, Edit3, Sparkles, FileText, Activity,
@@ -84,7 +84,7 @@ export interface PaymentMilestone {
   customerStatus: 'Paid' | 'Invoiced' | 'Pending';
   hqAmount: number;
   hqStatus: 'Paid' | 'Pending' | 'Not Started';
-  
+
   // Customer (AR) Details
   customerInvoiceDate?: string;
   customerInvoiceNumber?: string;
@@ -122,6 +122,7 @@ interface Project {
   customer: string;
   serialNumber: string;
   drawingNumber: string;
+  units?: { serialNumber: string; drawingNumber: string }[];
   currentStage: Stage;
   origin: string;
   destination: string;
@@ -191,10 +192,10 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     // We use a fake domain so users can just type "admin" or "leader"
     const email = `${username.toLowerCase().trim()}@transfotrack.com`;
-    
+
     try {
       if (isLogin) {
         const result = await signInWithEmailAndPassword(auth, email, password);
@@ -223,7 +224,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
         }
         const result = await createUserWithEmailAndPassword(auth, email, password);
         const user = result.user;
-        
+
         const newUser: AppUser = {
           id: user.uid,
           username: username.toLowerCase().trim(),
@@ -260,11 +261,11 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
       // Check if user exists in Firestore
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
-      
+
       let appUser: AppUser;
       if (userDoc.exists()) {
         appUser = userDoc.data() as AppUser;
@@ -295,7 +296,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-light font-sans text-brand-dark p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white p-8 rounded-2xl shadow-xl border border-brand-secondary/30 w-full max-w-md"
@@ -309,23 +310,23 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
         <p className="text-center text-brand-dark/80 mb-8 text-sm">
           {isLogin ? 'Sign in to your account' : 'Create a new account'}
         </p>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">Full Name</label>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={e => { setName(e.target.value); setError(''); }} 
-                  className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
-                  placeholder="e.g. John Doe" 
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => { setName(e.target.value); setError(''); }}
+                  className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50"
+                  placeholder="e.g. John Doe"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">Role</label>
-                <select 
+                <select
                   value={role}
                   onChange={e => setRole(e.target.value as 'admin' | 'leader' | 'member')}
                   className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50 bg-white"
@@ -339,22 +340,22 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
           )}
           <div>
             <label className="block text-sm font-medium text-brand-dark mb-1">Username</label>
-            <input 
-              type="text" 
-              value={username} 
-              onChange={e => { setUsername(e.target.value); setError(''); }} 
-              className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
-              placeholder="e.g. admin" 
+            <input
+              type="text"
+              value={username}
+              onChange={e => { setUsername(e.target.value); setError(''); }}
+              className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50"
+              placeholder="e.g. admin"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-brand-dark mb-1">Password</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={e => { setPassword(e.target.value); setError(''); }} 
-              className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50" 
-              placeholder="•••••••• (min 6 chars)" 
+            <input
+              type="password"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError(''); }}
+              className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark/50"
+              placeholder="•••••••• (min 6 chars)"
             />
           </div>
           {error && <p className="text-red-500 text-xs font-medium">{error}</p>}
@@ -364,7 +365,7 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
         </form>
 
         <div className="mt-4 text-center">
-          <button 
+          <button
             type="button"
             onClick={() => { setIsLogin(!isLogin); setError(''); setUsername(''); setPassword(''); setName(''); setRole('member'); }}
             className="text-sm text-brand-dark/80 hover:text-brand-dark font-medium transition-colors"
@@ -372,14 +373,14 @@ function Login({ onLogin }: { onLogin: (u: AppUser) => void }) {
             {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
           </button>
         </div>
-        
+
         <div className="mt-6 flex items-center justify-center gap-4">
           <div className="h-px bg-brand-dark/10 flex-1"></div>
           <span className="text-xs text-brand-secondary font-medium uppercase">Or continue with</span>
           <div className="h-px bg-brand-dark/10 flex-1"></div>
         </div>
 
-        <button 
+        <button
           type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
@@ -449,7 +450,7 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
           </div>
         </div>
         <div className="p-4 space-y-2">
-          <button 
+          <button
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
           >
@@ -484,8 +485,8 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
                     <td className="px-6 py-4 font-medium">{user.name}</td>
                     <td className="px-6 py-4 text-brand-dark/80">{user.username}</td>
                     <td className="px-6 py-4">
-                      <select 
-                        value={user.role} 
+                      <select
+                        value={user.role}
                         onChange={(e) => handleRoleChange(user.id, e.target.value as any)}
                         disabled={user.id === currentUser.id}
                         className="bg-transparent border border-brand-secondary/50 rounded px-2 py-1 focus:outline-none focus:border-brand-dark"
@@ -496,7 +497,7 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
                       </select>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
+                      <button
                         onClick={() => handleDeleteClick(user)}
                         disabled={user.id === currentUser.id}
                         className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-2 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
@@ -516,7 +517,7 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
       <AnimatePresence>
         {userToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -526,8 +527,8 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
               <p className="text-brand-dark/70 text-sm mb-4">
                 This action cannot be undone. To confirm, please type the username (<strong>{userToDelete.username}</strong>) below:
               </p>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value)}
                 className="w-full px-4 py-2 border border-brand-secondary/50 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-red-500/50"
@@ -535,7 +536,7 @@ function AdminDashboard({ users, currentUser, onLogout }: { users: AppUser[], cu
               />
               <div className="flex justify-end gap-3">
                 <button onClick={() => { setUserToDelete(null); setDeleteConfirmText(''); }} className="px-4 py-2 text-sm font-medium text-brand-dark/70 hover:text-brand-dark">Cancel</button>
-                <button 
+                <button
                   onClick={confirmDelete}
                   disabled={deleteConfirmText !== userToDelete.username}
                   className="px-4 py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -647,15 +648,15 @@ export default function App() {
       destination: '',
       startDate: '-',
       estFinalDelivery: '-',
-      oceanFreight: { 
-        fobDate: '-', cifDate: '-', etd: '-', eta: '-', atd: '-', ata: '-', 
+      oceanFreight: {
+        fobDate: '-', cifDate: '-', etd: '-', eta: '-', atd: '-', ata: '-',
         documents: [
           { name: 'B/L', received: false },
           { name: 'ISF', received: false },
           { name: 'Arrival Notice', received: false },
           { name: 'CIPL', received: false },
           { name: 'COO', received: false }
-        ] 
+        ]
       },
       inlandTransport: { ddpDate: '-', carrier: '', dischargingMethod: '', etd: '-', eta: '-', atd: '-', ata: '-', siteVisit: '-', railClearance: false, roadPermit: false, podReceived: false },
       installation: { startDate: '-', endDate: '-', contractor: '', supervisor: '', oilTotalReq: '', oilDeliveries: [], completionReport: false },
@@ -720,42 +721,42 @@ export default function App() {
         <div className="p-6 h-[88px]"></div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
-          <button 
+          <button
             onClick={() => { setActiveTab('dashboard'); setSelectedProjectId(null); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <LayoutDashboard size={20} />
             Dashboard
           </button>
-          <button 
+          <button
             onClick={() => { setActiveTab('projects'); setSelectedProjectId(null); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${(activeTab === 'projects' || selectedProject) ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <FolderKanban size={20} />
             Projects
           </button>
-          <button 
+          <button
             onClick={() => { setActiveTab('transportation'); setSelectedProjectId(null); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'transportation' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <Truck size={20} />
             Transportation
           </button>
-          <button 
+          <button
             onClick={() => { setActiveTab('installation'); setSelectedProjectId(null); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'installation' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <Wrench size={20} />
             Installation
           </button>
-          <button 
+          <button
             onClick={() => { setActiveTab('payments'); setSelectedProjectId(null); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'payments' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
             <CreditCard size={20} />
             Payments
           </button>
-          <button 
+          <button
             onClick={() => { setActiveTab('sop'); setSelectedProjectId(null); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'sop' && !selectedProject ? 'bg-brand-muted/30 font-medium' : 'hover:bg-brand-muted/20 opacity-80 hover:opacity-100'}`}
           >
@@ -769,7 +770,7 @@ export default function App() {
             <Settings size={20} />
             Settings
           </button>
-          <button 
+          <button
             onClick={() => { setCurrentUser(null); setSelectedProjectId(null); }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
           >
@@ -806,86 +807,86 @@ export default function App() {
           <div className="pt-8">
             {!selectedProject && (
               <div className="w-full mx-auto mb-6 flex flex-wrap gap-4 items-center bg-white p-4 rounded-xl shadow-sm border border-brand-secondary/30">
-              <div className="flex items-center gap-2 text-brand-dark/80 font-medium text-sm">
-                <Filter size={16} /> Filters:
-              </div>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" />
-                <input 
-                  type="text" 
-                  placeholder="Search project name or SO#..." 
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-3 py-1.5 w-64 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark placeholder:text-brand-secondary"
-                />
-              </div>
-              <select 
-                value={filterCustomer} 
-                onChange={e => setFilterCustomer(e.target.value)}
-                className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
-              >
-                <option value="">All Customers</option>
-                {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              {activeTab !== 'payments' && activeTab !== 'sop' && (
-                <>
-                  {activeTab === 'installation' ? (
-                    <select 
-                      value={filterContractor} 
-                      onChange={e => setFilterContractor(e.target.value)}
-                      className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
-                    >
-                      <option value="">All Installation Contractors</option>
-                      {uniqueContractors.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  ) : (
-                    <select 
-                      value={filterCarrier} 
-                      onChange={e => setFilterCarrier(e.target.value)}
-                      className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
-                    >
-                      <option value="">All Transportation Vendors</option>
-                      {uniqueCarriers.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  )}
-                </>
-              )}
-              {(searchQuery || filterCustomer || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
-                <button 
-                  onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterCarrier(''); setFilterContractor(''); }}
-                  className="text-xs font-medium text-brand-secondary hover:text-brand-dark"
+                <div className="flex items-center gap-2 text-brand-dark/80 font-medium text-sm">
+                  <Filter size={16} /> Filters:
+                </div>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-secondary" />
+                  <input
+                    type="text"
+                    placeholder="Search project name or SO#..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-3 py-1.5 w-64 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark placeholder:text-brand-secondary"
+                  />
+                </div>
+                <select
+                  value={filterCustomer}
+                  onChange={e => setFilterCustomer(e.target.value)}
+                  className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
                 >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          )}
-          <AnimatePresence mode="wait">
-            {selectedProject ? (
-              <ProjectDetail 
-                key="detail" 
-                project={selectedProject} 
-                currentUser={currentUser}
-                users={users}
-                allCustomers={allCustomers}
-                onBack={() => setSelectedProjectId(null)} 
-                onUpdate={handleUpdateProject}
-                onDelete={() => handleDeleteProject(selectedProject.id)}
-              />
-            ) : activeTab === 'dashboard' ? (
-              <Dashboard key="dashboard" projects={filteredProjects} onSelectProject={(p) => setSelectedProjectId(p.id)} />
-            ) : activeTab === 'projects' ? (
-              <ProjectList key="list" projects={filteredProjects} onSelectProject={(p) => setSelectedProjectId(p.id)} />
-            ) : activeTab === 'transportation' ? (
-              <TransportationView key="transportation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
-            ) : activeTab === 'installation' ? (
-              <InstallationView key="installation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
-            ) : activeTab === 'sop' ? (
-              <SOPView key="sop" />
-            ) : (
-              <PaymentsView key="payments" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
+                  <option value="">All Customers</option>
+                  {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {activeTab !== 'payments' && activeTab !== 'sop' && (
+                  <>
+                    {activeTab === 'installation' ? (
+                      <select
+                        value={filterContractor}
+                        onChange={e => setFilterContractor(e.target.value)}
+                        className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                      >
+                        <option value="">All Installation Contractors</option>
+                        {uniqueContractors.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    ) : (
+                      <select
+                        value={filterCarrier}
+                        onChange={e => setFilterCarrier(e.target.value)}
+                        className="px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-sm text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-dark"
+                      >
+                        <option value="">All Transportation Vendors</option>
+                        {uniqueCarriers.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
+                  </>
+                )}
+                {(searchQuery || filterCustomer || (activeTab !== 'payments' && activeTab !== 'sop' && (filterCarrier || filterContractor))) && (
+                  <button
+                    onClick={() => { setSearchQuery(''); setFilterCustomer(''); setFilterCarrier(''); setFilterContractor(''); }}
+                    className="text-xs font-medium text-brand-secondary hover:text-brand-dark"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
             )}
-          </AnimatePresence>
+            <AnimatePresence mode="wait">
+              {selectedProject ? (
+                <ProjectDetail
+                  key="detail"
+                  project={selectedProject}
+                  currentUser={currentUser}
+                  users={users}
+                  allCustomers={allCustomers}
+                  onBack={() => setSelectedProjectId(null)}
+                  onUpdate={handleUpdateProject}
+                  onDelete={() => handleDeleteProject(selectedProject.id)}
+                />
+              ) : activeTab === 'dashboard' ? (
+                <Dashboard key="dashboard" projects={filteredProjects} onSelectProject={(p) => setSelectedProjectId(p.id)} />
+              ) : activeTab === 'projects' ? (
+                <ProjectList key="list" projects={filteredProjects} onSelectProject={(p) => setSelectedProjectId(p.id)} />
+              ) : activeTab === 'transportation' ? (
+                <TransportationView key="transportation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
+              ) : activeTab === 'installation' ? (
+                <InstallationView key="installation" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
+              ) : activeTab === 'sop' ? (
+                <SOPView key="sop" />
+              ) : (
+                <PaymentsView key="payments" projects={filteredProjects} onUpdateProject={handleUpdateProject} />
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </main>
@@ -918,14 +919,14 @@ function getClosestDateInfo(project: Project) {
   addDate('Installation End', project.installation.endDate);
 
   if (dates.length === 0) return null;
-  
+
   // Sort by future first, then by diff
   dates.sort((a, b) => {
     if (a.isFuture && !b.isFuture) return -1;
     if (!a.isFuture && b.isFuture) return 1;
     return a.diff - b.diff;
   });
-  
+
   return dates[0];
 }
 
@@ -946,7 +947,7 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
   const topProjects = projectsWithDates.slice(0, 10);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -956,11 +957,11 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
         <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
         <p className="text-brand-dark/80 mt-1">Top 10 projects with the closest upcoming events.</p>
       </div>
-      
+
       <div className="flex flex-col gap-4">
         {topProjects.map(({ project, closestDate }, index) => (
-          <div 
-            key={project.id} 
+          <div
+            key={project.id}
             onClick={() => onSelectProject(project)}
             className="bg-white rounded-2xl p-5 shadow-sm border border-brand-secondary/30 cursor-pointer hover:shadow-md hover:border-brand-dark/30 transition-all group flex flex-col md:flex-row md:items-center justify-between gap-6"
           >
@@ -983,14 +984,14 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
                 <p className="text-sm text-brand-dark/80 truncate">{project.customer} • {project.destination}</p>
               </div>
             </div>
-            
+
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-12 w-full md:w-auto">
               {/* Stage Info */}
               <div className="flex flex-col gap-1 min-w-[150px]">
                 <span className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Current Stage</span>
                 <span className="font-semibold text-brand-dark">{project.currentStage}</span>
               </div>
-              
+
               {/* Date Info */}
               {closestDate ? (
                 <div className="flex flex-col gap-1 min-w-[200px]">
@@ -1009,7 +1010,7 @@ function Dashboard({ projects, onSelectProject }: { projects: Project[], onSelec
                   <span className="text-sm font-medium text-brand-secondary">No upcoming dates</span>
                 </div>
               )}
-              
+
               <button className="text-brand-secondary hover:text-brand-dark hidden md:block">
                 <ChevronRight size={20} />
               </button>
@@ -1027,11 +1028,11 @@ function EditableText({ isEditing, value, onChange, className = "", placeholder 
   if (!isEditing) return <span className={className}>{value}</span>;
   return (
     <>
-      <input 
-        type="text" 
-        value={value} 
-        onChange={e => onChange(e.target.value)} 
-        className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`} 
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`}
         placeholder={placeholder}
         list={list.length > 0 ? id : undefined}
       />
@@ -1047,11 +1048,11 @@ function EditableText({ isEditing, value, onChange, className = "", placeholder 
 function EditableDate({ isEditing, value, onChange, className = "" }: any) {
   if (!isEditing) return <span className={className}>{value}</span>;
   return (
-    <input 
-      type="date" 
-      value={value === '-' ? '' : value} 
-      onChange={e => onChange(e.target.value || '-')} 
-      className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`} 
+    <input
+      type="date"
+      value={value === '-' ? '' : value}
+      onChange={e => onChange(e.target.value || '-')}
+      className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all ${className}`}
     />
   );
 }
@@ -1060,9 +1061,9 @@ function EditableSelect({ isEditing, value, options, onChange, className = "" }:
   if (!isEditing) return <span className={className}>{value}</span>;
   return (
     <div className="relative w-full">
-      <select 
-        value={value} 
-        onChange={e => onChange(e.target.value)} 
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
         className={`w-full px-3 py-1.5 bg-brand-muted/15 border border-brand-secondary/30 rounded-lg text-brand-dark text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-all appearance-none pr-8 ${className}`}
       >
         {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
@@ -1112,7 +1113,7 @@ function EditableCombobox({ isEditing, value, options, onChange, placeholder = "
       <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-secondary pointer-events-none" />
       <AnimatePresence>
         {isOpen && filteredOptions.length > 0 && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
@@ -1204,20 +1205,20 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
 
   return (
     <>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="w-full mx-auto flex flex-col gap-6 relative"
       >
-      {/* Header */}
-      <button 
-        onClick={onBack}
-        className="w-fit flex items-center gap-2 text-sm font-medium text-brand-secondary hover:text-brand-dark hover:bg-brand-muted/15 px-3 py-1.5 -ml-3 -mb-2 rounded-lg transition-colors"
-      >
-        <ArrowLeft size={16} /> Back to Projects
-      </button>
-      <div className="bg-white rounded-xl p-6 md:p-8 shadow-md border border-brand-secondary/30 flex flex-col lg:flex-row lg:items-start justify-between gap-6 sticky top-0 z-40">
+        {/* Header */}
+        <button
+          onClick={onBack}
+          className="w-fit flex items-center gap-2 text-sm font-medium text-brand-secondary hover:text-brand-dark hover:bg-brand-muted/15 px-3 py-1.5 -ml-3 -mb-2 rounded-lg transition-colors"
+        >
+          <ArrowLeft size={16} /> Back to Projects
+        </button>
+        <div className="bg-white rounded-xl p-6 md:p-8 shadow-md border border-brand-secondary/30 flex flex-col lg:flex-row lg:items-start justify-between gap-6 sticky top-0 z-40">
           <div className="flex-1 w-full min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
               <div className="flex-1 min-w-0">
@@ -1238,10 +1239,10 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                     <option value="HDE">HDE</option>
                     <option value="HPT">HPT</option>
                   </select>
-                  <input 
-                    type="text" 
-                    value={editData.id} 
-                    onChange={e => updateField(['id'], e.target.value)} 
+                  <input
+                    type="text"
+                    value={editData.id}
+                    onChange={e => updateField(['id'], e.target.value)}
                     className="text-sm font-bold px-3 py-1.5 rounded-lg bg-brand-dark text-brand-light w-full sm:w-32 focus:outline-none focus:ring-2 focus:ring-brand-dark/50 shrink-0"
                   />
                 </div>
@@ -1267,8 +1268,8 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                 <User size={16} className="shrink-0" />
                 {isEditing && currentUser.role === 'leader' ? (
                   <div className="relative w-full">
-                    <select 
-                      value={editData.assignedTo || ''} 
+                    <select
+                      value={editData.assignedTo || ''}
                       onChange={e => updateField(['assignedTo'], e.target.value || null)}
                       className="bg-brand-muted/15 border border-brand-secondary/30 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-dark/30 w-full text-[15px] text-brand-dark appearance-none pr-8"
                     >
@@ -1284,375 +1285,434 @@ function ProjectDetail({ project, currentUser, users, allCustomers, onBack, onUp
                 )}
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
-                <Factory size={16} className="text-brand-secondary shrink-0" />
-                <span className="shrink-0">SERIAL#:</span> 
-                <div className="flex-1 min-w-0">
-                  <EditableText isEditing={isEditing} value={editData.serialNumber} onChange={(v: string) => updateField(['serialNumber'], v)} className="text-brand-dark font-bold w-full" />
-                </div>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-brand-dark/70 uppercase tracking-wider">Transformer Units</span>
+                {isEditing && (
+                  <button 
+                    onClick={() => {
+                      const currentUnits = editData.units && editData.units.length > 0
+                        ? editData.units 
+                        : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }];
+                      updateField(['units'], [...currentUnits, { serialNumber: '', drawingNumber: '' }]);
+                    }}
+                    className="text-xs font-bold text-brand-primary hover:text-brand-dark flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-brand-secondary/30 shadow-sm transition-colors hover:shadow-md"
+                  >
+                    <Plus size={14} /> Add Unit
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
-                <FileText size={16} className="text-brand-secondary shrink-0" />
-                <span className="shrink-0">DRAWING#:</span> 
-                <div className="flex-1 min-w-0">
-                  <EditableText isEditing={isEditing} value={editData.drawingNumber} onChange={(v: string) => updateField(['drawingNumber'], v)} className="text-brand-dark font-bold w-full" />
-                </div>
-              </div>
-            </div>
-          </div>
-        
-        <div className="flex flex-row flex-wrap items-center gap-3 shrink-0">
-          {isEditing ? (
-            <>
-              <button onClick={handleCancel} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 transition-colors shadow-sm">
-                <X size={16} /> Cancel
-              </button>
-              <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-brand-dark text-brand-light rounded-lg font-medium text-sm hover:bg-brand-dark/90 transition-colors shadow-sm">
-                <Save size={16} /> Save Changes
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg font-medium text-sm hover:bg-red-100 transition-colors shadow-sm">
-                <Trash2 size={16} /> Delete
-              </button>
-              <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 transition-colors shadow-sm">
-                <Edit3 size={16} /> Edit
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Progress Stepper */}
-      <div className="bg-white rounded-xl p-6 md:p-8 shadow-sm border border-brand-secondary/30 relative overflow-hidden flex flex-col gap-8">
-        {isEditing && (
-          <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 text-sm z-20">
-            <span className="font-medium text-brand-dark/80">Current Stage:</span>
-            <div className="w-full sm:w-64">
-              <EditableSelect isEditing={isEditing} value={editData.currentStage} options={stageOptions} onChange={(v: Stage) => updateField(['currentStage'], v)} className="font-bold" />
-            </div>
-          </div>
-        )}
-        <div className="relative">
-          <div className="absolute top-1/2 left-12 right-12 h-0.5 bg-brand-dark/10 -translate-y-1/2 -z-0" />
-          <div className="flex justify-between relative z-10">
-            <StepIndicator title="Manufacturing" icon={Factory} status={getStepStatus('Manufacturing', editData.currentStage)} />
-            <StepIndicator title="Ocean Freight" icon={Ship} status={getStepStatus('Ocean Freight', editData.currentStage)} date={formatDateRange(getBestDate(editData.oceanFreight.atd, editData.oceanFreight.etd), getBestDate(editData.oceanFreight.ata, editData.oceanFreight.eta))} />
-            <StepIndicator title="Inland Transport" icon={Truck} status={getStepStatus('Inland Transport', editData.currentStage)} date={formatDateRange(getBestDate(editData.inlandTransport.atd, editData.inlandTransport.etd), getBestDate(editData.inlandTransport.ata, editData.inlandTransport.eta))} />
-            <StepIndicator title="Installation" icon={Wrench} status={getStepStatus('Installation', editData.currentStage)} date={formatDateRange(editData.installation.startDate, editData.installation.endDate)} />
-            <StepIndicator title="Commissioning" icon={PlayCircle} status={getStepStatus('Commissioning', editData.currentStage)} />
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left Column - Details */}
-        <div className="flex-1 flex flex-col gap-6">
-          {/* Tabs */}
-          <div className="flex border-b border-brand-secondary/30">
-            <button 
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
-              onClick={() => setActiveTab('overview')}
-            >
-              Overview
-            </button>
-            <button 
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'tasks' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
-              onClick={() => setActiveTab('tasks')}
-            >
-              Tasks
-            </button>
-            <button 
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'logs' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
-              onClick={() => setActiveTab('logs')}
-            >
-              Logs
-            </button>
-          </div>
-
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Top 4 Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <InfoCard label="ORIGIN" value={editData.origin} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['origin'], v)} />
-                <InfoCard label="DESTINATION" value={editData.destination} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['destination'], v)} />
-                <InfoCard label="START DATE" value={editData.startDate} icon={Calendar} isEditing={isEditing} onChange={(v: string) => updateField(['startDate'], v)} type="date" />
-                <InfoCard label="EST. FINAL DELIVERY" value={editData.estFinalDelivery} icon={Calendar} isEditing={isEditing} onChange={(v: string) => updateField(['estFinalDelivery'], v)} type="date" />
-              </div>
-
-              {/* Ocean Transportation */}
-              <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
-                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
-                  <div className="flex items-center gap-2 font-bold text-brand-dark">
-                    <Ship size={18} className="text-brand-dark" />
-                    Ocean Transportation
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/80">
-                    <div className="flex items-center gap-2">FOB Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.fobDate} onChange={(v: string) => updateField(['oceanFreight', 'fobDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
-                    <div className="flex items-center gap-2">CIF Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.cifDate} onChange={(v: string) => updateField(['oceanFreight', 'cifDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-6">
-                    <DateItem label="Est. Departure (ETD)" value={editData.oceanFreight.etd} isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'etd'], v)} />
-                    <DateItem label="Est. Arrival (ETA)" value={editData.oceanFreight.eta} isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'eta'], v)} />
-                    <DateItem label="Act. Departure (ATD)" value={editData.oceanFreight.atd} highlight isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'atd'], v)} />
-                    <DateItem label="Act. Arrival (ATA)" value={editData.oceanFreight.ata} highlight isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'ata'], v)} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 text-xs font-bold text-brand-secondary mb-3 uppercase tracking-wider">
-                      <FileText size={14} /> Documents Received
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {editData.oceanFreight.documents.map((doc, idx) => (
-                        <React.Fragment key={doc.name}>
-                          {isEditing ? (
-                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-brand-muted/15 text-brand-dark/80 border-brand-secondary/50'}`}>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <input 
-                                  type="checkbox" 
-                                  checked={doc.received} 
-                                  onChange={e => {
-                                    const newDocs = [...editData.oceanFreight.documents];
-                                    newDocs[idx].received = e.target.checked;
-                                    updateField(['oceanFreight', 'documents'], newDocs);
-                                  }} 
-                                  className={`w-3.5 h-3.5 rounded-sm cursor-pointer ${doc.received ? 'accent-brand-light' : 'accent-brand-dark'}`} 
-                                />
-                                {doc.name}
-                              </label>
-                              <input 
-                                type="date" 
-                                value={doc.date || ''} 
-                                onChange={e => {
-                                  const newDocs = [...editData.oceanFreight.documents];
-                                  newDocs[idx].date = e.target.value;
-                                  updateField(['oceanFreight', 'documents'], newDocs);
-                                }}
-                                className={`ml-2 px-1 py-0.5 rounded text-xs focus:outline-none focus:ring-1 w-28 ${doc.received ? 'bg-brand-light/20 text-brand-light focus:ring-brand-light' : 'bg-white text-brand-dark focus:ring-brand-dark/30 border border-brand-secondary/50'}`}
-                              />
-                            </div>
-                          ) : (
-                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-white text-brand-secondary border-brand-secondary/50'}`}>
-                              <div className={`w-1.5 h-1.5 rounded-full ${doc.received ? 'bg-brand-light' : 'bg-brand-dark/20'}`} />
-                              {doc.name}
-                              {doc.date && <span className="ml-1 opacity-70 text-xs">({doc.date})</span>}
-                            </div>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Inland Transportation */}
-              <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
-                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
-                  <div className="flex items-center gap-2 font-bold text-brand-dark">
-                    <Truck size={18} className="text-brand-dark" />
-                    Inland Transportation
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-brand-dark/80">
-                    <div className="flex items-center gap-2">DDP Date: <EditableDate isEditing={isEditing} value={editData.inlandTransport.ddpDate} onChange={(v: string) => updateField(['inlandTransport', 'ddpDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <div className="text-xs text-brand-secondary mb-1">Transportation Vendor</div>
-                      <EditableText isEditing={isEditing} value={editData.inlandTransport.carrier} onChange={(v: string) => updateField(['inlandTransport', 'carrier'], v)} className="font-medium text-brand-dark" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-brand-secondary mb-1">Discharging Method</div>
-                      <EditableSelect isEditing={isEditing} value={editData.inlandTransport.dischargingMethod} options={['Rail', 'Trailer', 'Barge']} onChange={(v: string) => updateField(['inlandTransport', 'dischargingMethod'], v)} className="font-medium text-brand-dark" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-6">
-                    <DateItem label="Est. Departure" value={editData.inlandTransport.etd} isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'etd'], v)} />
-                    <DateItem label="Est. Arrival" value={editData.inlandTransport.eta} isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'eta'], v)} />
-                    <DateItem label="Act. Departure" value={editData.inlandTransport.atd} highlight isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'atd'], v)} />
-                    <DateItem label="Act. Arrival" value={editData.inlandTransport.ata} highlight isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'ata'], v)} />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-brand-dark/5">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-brand-dark/80">Site Visit:</span>
-                      <EditableDate isEditing={isEditing} value={editData.inlandTransport.siteVisit} onChange={(v: string) => updateField(['inlandTransport', 'siteVisit'], v)} className="font-medium text-brand-dark bg-brand-muted/15 px-2 py-1 rounded border border-brand-secondary/30" />
-                    </div>
-                    <CheckboxItem label="Road Permit" checked={editData.inlandTransport.roadPermit} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'roadPermit'], v)} />
-                    <CheckboxItem label="POD Received" checked={editData.inlandTransport.podReceived} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'podReceived'], v)} />
-                  </div>
-                  <div className="pt-4 mt-4 border-t border-brand-dark/5">
-                    <div className="text-xs text-brand-secondary mb-1">Site Contact</div>
-                    {isEditing ? (
-                      <textarea 
-                        value={editData.inlandTransport.siteContact || ''}
-                        onChange={(e) => updateField(['inlandTransport', 'siteContact'], e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
-                        placeholder="Enter site contact details (multiple contacts allowed)..."
-                      />
-                    ) : (
-                      <div className="text-sm text-brand-dark whitespace-pre-wrap">
-                        {editData.inlandTransport.siteContact || '-'}
+              
+              <div className="flex flex-col gap-3">
+                {(editData.units && editData.units.length > 0 ? editData.units : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }]).map((unit, idx) => (
+                  <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 relative group">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
+                      <Factory size={16} className="text-brand-secondary shrink-0" />
+                      <span className="shrink-0 whitespace-nowrap">SERIAL# <span className="text-xs text-brand-secondary">({idx + 1})</span>:</span>
+                      <div className="flex-1 min-w-0">
+                        <EditableText 
+                          isEditing={isEditing} 
+                          value={unit.serialNumber} 
+                          onChange={(v: string) => {
+                            if (idx === 0) updateField(['serialNumber'], v);
+                            const newUnits = [...(editData.units && editData.units.length > 0 ? editData.units : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }])];
+                            newUnits[idx] = { ...newUnits[idx], serialNumber: v };
+                            updateField(['units'], newUnits);
+                          }} 
+                          className="text-brand-dark font-bold w-full" 
+                        />
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg text-sm font-medium text-brand-dark/70 flex-1 min-w-[220px]">
+                      <FileText size={16} className="text-brand-secondary shrink-0" />
+                      <span className="shrink-0 whitespace-nowrap">DRAWING# <span className="text-xs text-brand-secondary">({idx + 1})</span>:</span>
+                      <div className="flex-1 min-w-0">
+                        <EditableText 
+                          isEditing={isEditing} 
+                          value={unit.drawingNumber} 
+                          onChange={(v: string) => {
+                            if (idx === 0) updateField(['drawingNumber'], v);
+                            const newUnits = [...(editData.units && editData.units.length > 0 ? editData.units : [{ serialNumber: editData.serialNumber || '', drawingNumber: editData.drawingNumber || '' }])];
+                            newUnits[idx] = { ...newUnits[idx], drawingNumber: v };
+                            updateField(['units'], newUnits);
+                          }} 
+                          className="text-brand-dark font-bold w-full" 
+                        />
+                      </div>
+                    </div>
+                    {isEditing && (editData.units ? editData.units.length : 1) > 1 && (
+                      <button 
+                        onClick={() => {
+                          const newUnits = [...(editData.units || [])];
+                          newUnits.splice(idx, 1);
+                          updateField(['units'], newUnits);
+                          if (idx === 0 && newUnits.length > 0) {
+                            updateField(['serialNumber'], newUnits[0].serialNumber);
+                            updateField(['drawingNumber'], newUnits[0].drawingNumber);
+                          }
+                        }}
+                        className="p-2 bg-white border border-red-200 text-red-500 hover:text-white hover:bg-red-500 hover:border-red-600 rounded-lg transition-all shadow-sm flex items-center justify-center h-[38px] w-[38px] shrink-0"
+                        title="Remove unit"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     )}
                   </div>
-                </div>
+                ))}
               </div>
+            </div>
+          </div>
 
-              {/* Installation & Assembly */}
-              <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
-                <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
-                  <div className="flex items-center gap-2 font-bold text-brand-dark">
-                    <Wrench size={18} className="text-brand-dark" />
-                    Installation & Assembly
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/80">
-                    <div className="flex items-center gap-2">Start: <EditableDate isEditing={isEditing} value={editData.installation.startDate} onChange={(v: string) => updateField(['installation', 'startDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
-                    <div className="flex items-center gap-2">End: <EditableDate isEditing={isEditing} value={editData.installation.endDate} onChange={(v: string) => updateField(['installation', 'endDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
-                  </div>
+          <div className="flex flex-row flex-wrap items-center gap-3 shrink-0">
+            {isEditing ? (
+              <>
+                <button onClick={handleCancel} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 transition-colors shadow-sm">
+                  <X size={16} /> Cancel
+                </button>
+                <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-brand-dark text-brand-light rounded-lg font-medium text-sm hover:bg-brand-dark/90 transition-colors shadow-sm">
+                  <Save size={16} /> Save Changes
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg font-medium text-sm hover:bg-red-100 transition-colors shadow-sm">
+                  <Trash2 size={16} /> Delete
+                </button>
+                <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-brand-secondary/50 rounded-lg font-medium text-sm text-brand-dark hover:bg-brand-muted/15 transition-colors shadow-sm">
+                  <Edit3 size={16} /> Edit
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Progress Stepper */}
+        <div className="bg-white rounded-xl p-6 md:p-8 shadow-sm border border-brand-secondary/30 relative overflow-hidden flex flex-col gap-8">
+          {isEditing && (
+            <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 text-sm z-20">
+              <span className="font-medium text-brand-dark/80">Current Stage:</span>
+              <div className="w-full sm:w-64">
+                <EditableSelect isEditing={isEditing} value={editData.currentStage} options={stageOptions} onChange={(v: Stage) => updateField(['currentStage'], v)} className="font-bold" />
+              </div>
+            </div>
+          )}
+          <div className="relative">
+            <div className="absolute top-1/2 left-12 right-12 h-0.5 bg-brand-dark/10 -translate-y-1/2 -z-0" />
+            <div className="flex justify-between relative z-10">
+              <StepIndicator title="Manufacturing" icon={Factory} status={getStepStatus('Manufacturing', editData.currentStage)} />
+              <StepIndicator title="Ocean Freight" icon={Ship} status={getStepStatus('Ocean Freight', editData.currentStage)} date={formatDateRange(getBestDate(editData.oceanFreight.atd, editData.oceanFreight.etd), getBestDate(editData.oceanFreight.ata, editData.oceanFreight.eta))} />
+              <StepIndicator title="Inland Transport" icon={Truck} status={getStepStatus('Inland Transport', editData.currentStage)} date={formatDateRange(getBestDate(editData.inlandTransport.atd, editData.inlandTransport.etd), getBestDate(editData.inlandTransport.ata, editData.inlandTransport.eta))} />
+              <StepIndicator title="Installation" icon={Wrench} status={getStepStatus('Installation', editData.currentStage)} date={formatDateRange(editData.installation.startDate, editData.installation.endDate)} />
+              <StepIndicator title="Commissioning" icon={PlayCircle} status={getStepStatus('Commissioning', editData.currentStage)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Column - Details */}
+          <div className="flex-1 flex flex-col gap-6">
+            {/* Tabs */}
+            <div className="flex border-b border-brand-secondary/30">
+              <button
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
+                onClick={() => setActiveTab('overview')}
+              >
+                Overview
+              </button>
+              <button
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'tasks' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
+                onClick={() => setActiveTab('tasks')}
+              >
+                Tasks
+              </button>
+              <button
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'logs' ? 'border-brand-dark text-brand-dark' : 'border-transparent text-brand-secondary hover:text-brand-dark'}`}
+                onClick={() => setActiveTab('logs')}
+              >
+                Logs
+              </button>
+            </div>
+
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                {/* Top 4 Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <InfoCard label="ORIGIN" value={editData.origin} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['origin'], v)} />
+                  <InfoCard label="DESTINATION" value={editData.destination} icon={MapPin} isEditing={isEditing} onChange={(v: string) => updateField(['destination'], v)} />
+                  <InfoCard label="START DATE" value={editData.startDate} icon={Calendar} isEditing={isEditing} onChange={(v: string) => updateField(['startDate'], v)} type="date" />
+                  <InfoCard label="EST. FINAL DELIVERY" value={editData.estFinalDelivery} icon={Calendar} isEditing={isEditing} onChange={(v: string) => updateField(['estFinalDelivery'], v)} type="date" />
                 </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <div className="text-xs text-brand-secondary mb-1">Installation Vendor</div>
-                      <EditableText isEditing={isEditing} value={editData.installation.contractor} onChange={(v: string) => updateField(['installation', 'contractor'], v)} className="font-medium text-brand-dark" />
+
+                {/* Ocean Transportation */}
+                <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
+                    <div className="flex items-center gap-2 font-bold text-brand-dark">
+                      <Ship size={18} className="text-brand-dark" />
+                      Ocean Transportation
                     </div>
-                    <div>
-                      <div className="text-xs text-brand-secondary mb-1 flex items-center gap-1"><Activity size={12}/> Supervisor</div>
-                      <EditableText isEditing={isEditing} value={editData.installation.supervisor} onChange={(v: string) => updateField(['installation', 'supervisor'], v)} className="font-medium text-brand-dark" />
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/80">
+                      <div className="flex items-center gap-2">FOB Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.fobDate} onChange={(v: string) => updateField(['oceanFreight', 'fobDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
+                      <div className="flex items-center gap-2">CIF Date: <EditableDate isEditing={isEditing} value={editData.oceanFreight.cifDate} onChange={(v: string) => updateField(['oceanFreight', 'cifDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
                     </div>
                   </div>
-                  
-                  <div className="pt-4 border-t border-brand-dark/5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Oil Delivery Schedule</div>
-                      <div className="text-xs text-brand-dark/80 flex items-center gap-2">
-                        Total Req: <EditableText isEditing={isEditing} value={editData.installation.oilTotalReq} onChange={(v: string) => updateField(['installation', 'oilTotalReq'], v)} className="font-bold text-brand-dark w-24" />
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-6">
+                      <DateItem label="Est. Departure (ETD)" value={editData.oceanFreight.etd} isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'etd'], v)} />
+                      <DateItem label="Est. Arrival (ETA)" value={editData.oceanFreight.eta} isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'eta'], v)} />
+                      <DateItem label="Act. Departure (ATD)" value={editData.oceanFreight.atd} highlight isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'atd'], v)} />
+                      <DateItem label="Act. Arrival (ATA)" value={editData.oceanFreight.ata} highlight isEditing={isEditing} onChange={(v: string) => updateField(['oceanFreight', 'ata'], v)} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-brand-secondary mb-3 uppercase tracking-wider">
+                        <FileText size={14} /> Documents Received
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {editData.oceanFreight.documents.map((doc, idx) => (
+                          <React.Fragment key={doc.name}>
+                            {isEditing ? (
+                              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-brand-muted/15 text-brand-dark/80 border-brand-secondary/50'}`}>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={doc.received}
+                                    onChange={e => {
+                                      const newDocs = [...editData.oceanFreight.documents];
+                                      newDocs[idx].received = e.target.checked;
+                                      updateField(['oceanFreight', 'documents'], newDocs);
+                                    }}
+                                    className={`w-3.5 h-3.5 rounded-sm cursor-pointer ${doc.received ? 'accent-brand-light' : 'accent-brand-dark'}`}
+                                  />
+                                  {doc.name}
+                                </label>
+                                <input
+                                  type="date"
+                                  value={doc.date || ''}
+                                  onChange={e => {
+                                    const newDocs = [...editData.oceanFreight.documents];
+                                    newDocs[idx].date = e.target.value;
+                                    updateField(['oceanFreight', 'documents'], newDocs);
+                                  }}
+                                  className={`ml-2 px-1 py-0.5 rounded text-xs focus:outline-none focus:ring-1 w-28 ${doc.received ? 'bg-brand-light/20 text-brand-light focus:ring-brand-light' : 'bg-white text-brand-dark focus:ring-brand-dark/30 border border-brand-secondary/50'}`}
+                                />
+                              </div>
+                            ) : (
+                              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border ${doc.received ? 'bg-brand-dark text-brand-light border-brand-dark shadow-sm' : 'bg-white text-brand-secondary border-brand-secondary/50'}`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${doc.received ? 'bg-brand-light' : 'bg-brand-dark/20'}`} />
+                                {doc.name}
+                                {doc.date && <span className="ml-1 opacity-70 text-xs">({doc.date})</span>}
+                              </div>
+                            )}
+                          </React.Fragment>
+                        ))}
                       </div>
                     </div>
-                    <div className="space-y-2 mb-4">
-                      {editData.installation.oilDeliveries.map((delivery, i) => (
-                        <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-brand-muted/15 rounded-lg border border-brand-dark/5 text-sm gap-2">
-                          <div className="font-medium text-brand-dark/80 w-24 shrink-0">{getDeliveryLabel(i)}</div>
-                          <div className="flex items-center gap-4 text-brand-dark/80">
-                            <span className="flex items-center gap-1">
-                              <Calendar size={14}/> 
-                              <EditableDate isEditing={isEditing} value={delivery.date} onChange={(v: string) => {
-                                const newDel = [...editData.installation.oilDeliveries];
-                                newDel[i].date = v;
-                                updateField(['installation', 'oilDeliveries'], newDel);
-                              }} />
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock size={14}/> 
-                              <EditableText isEditing={isEditing} value={delivery.time} onChange={(v: string) => {
-                                const newDel = [...editData.installation.oilDeliveries];
-                                newDel[i].time = v;
-                                updateField(['installation', 'oilDeliveries'], newDel);
-                              }} className="w-20" />
-                            </span>
-                            {isEditing && (
-                              <button 
-                                onClick={() => {
-                                  const newDel = editData.installation.oilDeliveries.filter((_, idx) => idx !== i);
-                                  updateField(['installation', 'oilDeliveries'], newDel);
-                                }} 
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 transition-colors"
-                              >
-                                <X size={14} />
-                              </button>
-                            )}
-                          </div>
+                  </div>
+                </div>
+
+                {/* Inland Transportation */}
+                <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
+                    <div className="flex items-center gap-2 font-bold text-brand-dark">
+                      <Truck size={18} className="text-brand-dark" />
+                      Inland Transportation
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-brand-dark/80">
+                      <div className="flex items-center gap-2">DDP Date: <EditableDate isEditing={isEditing} value={editData.inlandTransport.ddpDate} onChange={(v: string) => updateField(['inlandTransport', 'ddpDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <div className="text-xs text-brand-secondary mb-1">Transportation Vendor</div>
+                        <EditableText isEditing={isEditing} value={editData.inlandTransport.carrier} onChange={(v: string) => updateField(['inlandTransport', 'carrier'], v)} className="font-medium text-brand-dark" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-brand-secondary mb-1">Discharging Method</div>
+                        <EditableSelect isEditing={isEditing} value={editData.inlandTransport.dischargingMethod} options={['Rail', 'Trailer', 'Barge']} onChange={(v: string) => updateField(['inlandTransport', 'dischargingMethod'], v)} className="font-medium text-brand-dark" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-6">
+                      <DateItem label="Est. Departure" value={editData.inlandTransport.etd} isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'etd'], v)} />
+                      <DateItem label="Est. Arrival" value={editData.inlandTransport.eta} isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'eta'], v)} />
+                      <DateItem label="Act. Departure" value={editData.inlandTransport.atd} highlight isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'atd'], v)} />
+                      <DateItem label="Act. Arrival" value={editData.inlandTransport.ata} highlight isEditing={isEditing} onChange={(v: string) => updateField(['inlandTransport', 'ata'], v)} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-brand-dark/5">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-brand-dark/80">Site Visit:</span>
+                        <EditableDate isEditing={isEditing} value={editData.inlandTransport.siteVisit} onChange={(v: string) => updateField(['inlandTransport', 'siteVisit'], v)} className="font-medium text-brand-dark bg-brand-muted/15 px-2 py-1 rounded border border-brand-secondary/30" />
+                      </div>
+                      <CheckboxItem label="Road Permit" checked={editData.inlandTransport.roadPermit} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'roadPermit'], v)} />
+                      <CheckboxItem label="POD Received" checked={editData.inlandTransport.podReceived} isEditing={isEditing} onChange={(v: boolean) => updateField(['inlandTransport', 'podReceived'], v)} />
+                    </div>
+                    <div className="pt-4 mt-4 border-t border-brand-dark/5">
+                      <div className="text-xs text-brand-secondary mb-1">Site Contact</div>
+                      {isEditing ? (
+                        <textarea
+                          value={editData.inlandTransport.siteContact || ''}
+                          onChange={(e) => updateField(['inlandTransport', 'siteContact'], e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow min-h-[80px] resize-y"
+                          placeholder="Enter site contact details (multiple contacts allowed)..."
+                        />
+                      ) : (
+                        <div className="text-sm text-brand-dark whitespace-pre-wrap">
+                          {editData.inlandTransport.siteContact || '-'}
                         </div>
-                      ))}
-                      {isEditing && (
-                        <button 
-                          onClick={() => {
-                            const newDel = [...editData.installation.oilDeliveries, { name: '', date: '-', time: '00:00' }];
-                            updateField(['installation', 'oilDeliveries'], newDel);
-                          }}
-                          className="w-full py-2 border border-dashed border-brand-dark/30 rounded-lg text-brand-dark/80 hover:text-brand-dark hover:border-brand-dark/50 flex items-center justify-center gap-2 text-sm transition-colors"
-                        >
-                          <Plus size={16} /> Add Delivery
-                        </button>
                       )}
                     </div>
-                    <div className="flex justify-end">
-                      <CheckboxItem label="Completion Report" checked={editData.installation.completionReport} isEditing={isEditing} onChange={(v: boolean) => updateField(['installation', 'completionReport'], v)} />
+                  </div>
+                </div>
+
+                {/* Installation & Assembly */}
+                <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-brand-dark/5 flex flex-col sm:flex-row sm:items-center justify-between bg-brand-muted/15 gap-4">
+                    <div className="flex items-center gap-2 font-bold text-brand-dark">
+                      <Wrench size={18} className="text-brand-dark" />
+                      Installation & Assembly
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-brand-dark/80">
+                      <div className="flex items-center gap-2">Start: <EditableDate isEditing={isEditing} value={editData.installation.startDate} onChange={(v: string) => updateField(['installation', 'startDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
+                      <div className="flex items-center gap-2">End: <EditableDate isEditing={isEditing} value={editData.installation.endDate} onChange={(v: string) => updateField(['installation', 'endDate'], v)} className="font-medium text-brand-dark bg-white px-2 py-1 rounded border border-brand-secondary/30" /></div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <div className="text-xs text-brand-secondary mb-1">Installation Vendor</div>
+                        <EditableText isEditing={isEditing} value={editData.installation.contractor} onChange={(v: string) => updateField(['installation', 'contractor'], v)} className="font-medium text-brand-dark" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-brand-secondary mb-1 flex items-center gap-1"><Activity size={12} /> Supervisor</div>
+                        <EditableText isEditing={isEditing} value={editData.installation.supervisor} onChange={(v: string) => updateField(['installation', 'supervisor'], v)} className="font-medium text-brand-dark" />
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-brand-dark/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-xs font-bold text-brand-secondary uppercase tracking-wider">Oil Delivery Schedule</div>
+                        <div className="text-xs text-brand-dark/80 flex items-center gap-2">
+                          Total Req: <EditableText isEditing={isEditing} value={editData.installation.oilTotalReq} onChange={(v: string) => updateField(['installation', 'oilTotalReq'], v)} className="font-bold text-brand-dark w-24" />
+                        </div>
+                      </div>
+                      <div className="space-y-2 mb-4">
+                        {editData.installation.oilDeliveries.map((delivery, i) => (
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-brand-muted/15 rounded-lg border border-brand-dark/5 text-sm gap-2">
+                            <div className="font-medium text-brand-dark/80 w-24 shrink-0">{getDeliveryLabel(i)}</div>
+                            <div className="flex items-center gap-4 text-brand-dark/80">
+                              <span className="flex items-center gap-1">
+                                <Calendar size={14} />
+                                <EditableDate isEditing={isEditing} value={delivery.date} onChange={(v: string) => {
+                                  const newDel = [...editData.installation.oilDeliveries];
+                                  newDel[i].date = v;
+                                  updateField(['installation', 'oilDeliveries'], newDel);
+                                }} />
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock size={14} />
+                                <EditableText isEditing={isEditing} value={delivery.time} onChange={(v: string) => {
+                                  const newDel = [...editData.installation.oilDeliveries];
+                                  newDel[i].time = v;
+                                  updateField(['installation', 'oilDeliveries'], newDel);
+                                }} className="w-20" />
+                              </span>
+                              {isEditing && (
+                                <button
+                                  onClick={() => {
+                                    const newDel = editData.installation.oilDeliveries.filter((_, idx) => idx !== i);
+                                    updateField(['installation', 'oilDeliveries'], newDel);
+                                  }}
+                                  className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 transition-colors"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {isEditing && (
+                          <button
+                            onClick={() => {
+                              const newDel = [...editData.installation.oilDeliveries, { name: '', date: '-', time: '00:00' }];
+                              updateField(['installation', 'oilDeliveries'], newDel);
+                            }}
+                            className="w-full py-2 border border-dashed border-brand-dark/30 rounded-lg text-brand-dark/80 hover:text-brand-dark hover:border-brand-dark/50 flex items-center justify-center gap-2 text-sm transition-colors"
+                          >
+                            <Plus size={16} /> Add Delivery
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex justify-end">
+                        <CheckboxItem label="Completion Report" checked={editData.installation.completionReport} isEditing={isEditing} onChange={(v: boolean) => updateField(['installation', 'completionReport'], v)} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'tasks' && (
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-secondary/30 text-center text-brand-secondary">
-              Tasks view is currently disabled.
-            </div>
-          )}
+            {activeTab === 'tasks' && (
+              <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-secondary/30 text-center text-brand-secondary">
+                Tasks view is currently disabled.
+              </div>
+            )}
 
-          {activeTab === 'logs' && (
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-secondary/30 text-center text-brand-secondary">
-              Detailed logs view.
-            </div>
-          )}
+            {activeTab === 'logs' && (
+              <div className="bg-white rounded-xl p-8 shadow-sm border border-brand-secondary/30 text-center text-brand-secondary">
+                Detailed logs view.
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
 
-    {/* Delete Confirmation Modal */}
-    <AnimatePresence>
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-2xl p-6 shadow-xl max-w-md w-full border border-brand-secondary/30"
-          >
-            <h3 className="text-xl font-bold text-brand-dark mb-2">Delete Project</h3>
-            <p className="text-brand-dark/70 text-sm mb-6">
-              This action cannot be undone. To confirm deletion, please type the Project ID (<span className="font-bold text-brand-dark">{project.id}</span>) below.
-            </p>
-            <input 
-              type="text" 
-              value={deleteInput}
-              onChange={(e) => setDeleteInput(e.target.value)}
-              placeholder={project.id}
-              className="w-full px-4 py-2 mb-6 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
-            />
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteInput('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-brand-dark hover:bg-brand-muted/15 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleDeleteConfirm}
-                disabled={deleteInput !== project.id}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-                  deleteInput === project.id 
-                    ? 'bg-red-600 text-white hover:bg-red-700 shadow-sm' 
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 shadow-xl max-w-md w-full border border-brand-secondary/30"
+            >
+              <h3 className="text-xl font-bold text-brand-dark mb-2">Delete Project</h3>
+              <p className="text-brand-dark/70 text-sm mb-6">
+                This action cannot be undone. To confirm deletion, please type the Project ID (<span className="font-bold text-brand-dark">{project.id}</span>) below.
+              </p>
+              <input
+                type="text"
+                value={deleteInput}
+                onChange={(e) => setDeleteInput(e.target.value)}
+                placeholder={project.id}
+                className="w-full px-4 py-2 mb-6 border border-brand-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteInput('');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-brand-dark hover:bg-brand-muted/15 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteInput !== project.id}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${deleteInput === project.id
+                    ? 'bg-red-600 text-white hover:bg-red-700 shadow-sm'
                     : 'bg-red-100 text-red-400 cursor-not-allowed'
-                }`}
-              >
-                <Trash2 size={16} />
-                Confirm Delete
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+                    }`}
+                >
+                  <Trash2 size={16} />
+                  Confirm Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -1663,7 +1723,7 @@ const STAGES: Stage[] = ['Manufacturing', 'Ocean Freight', 'Inland Transport', '
 function getStepStatus(step: Stage, currentStage: Stage): 'completed' | 'active' | 'pending' {
   const currentIndex = STAGES.indexOf(currentStage);
   const stepIndex = STAGES.indexOf(step);
-  
+
   if (stepIndex < currentIndex) return 'completed';
   if (stepIndex === currentIndex) return 'active';
   return 'pending';
@@ -1672,11 +1732,10 @@ function getStepStatus(step: Stage, currentStage: Stage): 'completed' | 'active'
 function StepIndicator({ title, icon: Icon, status, date }: { title: string, icon: any, status: 'completed' | 'active' | 'pending', date?: string }) {
   return (
     <div className="flex flex-col items-center gap-3 bg-white px-2">
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors ${
-        status === 'completed' ? 'bg-brand-dark border-brand-dark text-brand-light' :
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors ${status === 'completed' ? 'bg-brand-dark border-brand-dark text-brand-light' :
         status === 'active' ? 'bg-brand-light border-brand-dark text-brand-dark' :
-        'bg-white border-brand-secondary/50 text-brand-dark/30'
-      }`}>
+          'bg-white border-brand-secondary/50 text-brand-dark/30'
+        }`}>
         {status === 'completed' ? <Check size={20} /> : <Icon size={20} />}
       </div>
       <div className="flex flex-col items-center gap-1">
@@ -1743,22 +1802,48 @@ function ProjectList({ projects, onSelectProject }: { projects: Project[], onSel
   return (
     <div className="w-full mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-brand-dark">All Projects</h2>
-      <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
-        {projects.map((p, index) => (
-          <div key={p.id} onClick={() => onSelectProject(p)} className="p-4 border-b border-brand-dark/5 hover:bg-brand-muted/15 cursor-pointer text-brand-dark flex items-center gap-4">
-            <span className="text-xs font-mono font-bold text-brand-secondary w-6">#{index + 1}</span>
-            {p.unitType && (
-              <span className="text-xs font-bold px-2 py-1 rounded bg-brand-dark/10 text-brand-dark border border-brand-secondary/50 shrink-0 w-12 text-center">
-                {p.unitType}
-              </span>
+      <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-x-auto">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
+          <thead>
+            <tr className="border-b border-brand-dark/10 bg-brand-muted/10 text-xs font-bold uppercase tracking-wider text-brand-secondary">
+              <th className="px-6 py-4 text-center w-16">#</th>
+              <th className="px-6 py-4 text-center w-24">Type</th>
+              <th className="px-6 py-4">SO#</th>
+              <th className="px-6 py-4">Customer</th>
+              <th className="px-6 py-4 w-full">Project Name</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-brand-dark/5">
+            {projects.map((p, index) => (
+              <tr 
+                key={p.id} 
+                onClick={() => onSelectProject(p)} 
+                className="hover:bg-brand-muted/15 cursor-pointer text-brand-dark transition-colors group text-[15px] font-medium"
+              >
+                <td className="px-6 py-4 text-center text-brand-secondary">#{index + 1}</td>
+                <td className="px-6 py-4 text-center">
+                  {p.unitType || '-'}
+                </td>
+                <td className="px-6 py-4">
+                  {p.id}
+                </td>
+                <td className="px-6 py-4 max-w-[200px] xl:max-w-[400px] truncate" title={p.customer}>
+                  {p.customer}
+                </td>
+                <td className="px-6 py-4 max-w-[250px] xl:max-w-[500px] truncate" title={p.name}>
+                  {p.name}
+                </td>
+              </tr>
+            ))}
+            {projects.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-brand-secondary text-sm">
+                  No projects found.
+                </td>
+              </tr>
             )}
-            <span className="text-xs font-bold px-2 py-1 rounded bg-brand-dark/10 text-brand-dark shrink-0 w-24 text-center">
-              {p.id}
-            </span>
-            <span className="font-medium">{p.name}</span>
-            <span className="text-sm text-brand-dark/80 ml-auto">{p.customer}</span>
-          </div>
-        ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1768,14 +1853,14 @@ const calculateDueDate = (invoiceDate?: string, netTerms?: string) => {
   if (!invoiceDate || !netTerms) return '';
   const date = new Date(invoiceDate);
   if (isNaN(date.getTime())) return '';
-  
+
   let days = 0;
   if (netTerms === 'Net 30 days') days = 30;
   else if (netTerms === 'Net 45 days') days = 45;
   else if (netTerms === 'Net 60 days') days = 60;
-  
+
   if (days === 0) return '';
-  
+
   date.setDate(date.getDate() + days);
   return date.toISOString().split('T')[0];
 };
@@ -1804,7 +1889,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
     if (!editData) return;
     const newMilestones = [...editData.milestones];
     const updatedMilestone = { ...newMilestones[index], [field]: value };
-    
+
     if (field === 'customerStatus' || field === 'hqStatus') {
       if (updatedMilestone.customerStatus === 'Paid' && updatedMilestone.hqStatus === 'Paid') {
         updatedMilestone.isDone = true;
@@ -1826,7 +1911,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
         updatedMilestone.hqDueDate = newDueDate;
       }
     }
-    
+
     newMilestones[index] = updatedMilestone;
     setEditData({ ...editData, milestones: newMilestones });
   };
@@ -1861,7 +1946,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
     if (!project.paymentMilestones) return;
     const newMilestones = [...project.paymentMilestones.milestones];
     const updatedMilestone = { ...newMilestones[index], [field]: value };
-    
+
     if (field === 'customerStatus' || field === 'hqStatus') {
       if (updatedMilestone.customerStatus === 'Paid' && updatedMilestone.hqStatus === 'Paid') {
         updatedMilestone.isDone = true;
@@ -1869,13 +1954,13 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
         updatedMilestone.isDone = false;
       }
     }
-    
+
     newMilestones[index] = updatedMilestone;
     const updatedPaymentData = { ...project.paymentMilestones, milestones: newMilestones };
-    
+
     const updatedProject = { ...project, paymentMilestones: updatedPaymentData };
     onUpdateProject(updatedProject);
-    
+
     if (editData) {
       const newEditMilestones = [...editData.milestones];
       newEditMilestones[index] = updatedMilestone;
@@ -1885,10 +1970,10 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
 
   const data = isEditing ? editData : project.paymentMilestones;
   const milestones = data?.milestones || [];
-  
+
   const customerCollected = milestones.filter(m => m.customerStatus === 'Paid').reduce((sum, m) => sum + m.customerAmount, 0);
   const hqPaid = milestones.filter(m => m.hqStatus === 'Paid').reduce((sum, m) => sum + m.hqAmount, 0);
-  
+
   const customerProgress = data?.totalRevenue ? Math.round((customerCollected / data.totalRevenue) * 100) : 0;
   const hqProgress = data?.totalCost ? Math.round((hqPaid / data.totalCost) * 100) : 0;
 
@@ -1913,7 +1998,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm font-medium text-brand-dark/80">
             CURRENCY:
@@ -1950,10 +2035,10 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
               <div>
                 <div className="text-emerald-700/70 text-xs font-medium mb-1">Total Contract Amount</div>
                 {isEditing ? (
-                  <input 
-                    type="number" 
-                    value={editData?.totalRevenue || 0} 
-                    onChange={e => setEditData(prev => prev ? {...prev, totalRevenue: Number(e.target.value)} : null)}
+                  <input
+                    type="number"
+                    value={editData?.totalRevenue || 0}
+                    onChange={e => setEditData(prev => prev ? { ...prev, totalRevenue: Number(e.target.value) } : null)}
                     className="text-2xl font-bold text-emerald-900 bg-white border-2 border-emerald-200 rounded-lg px-3 py-1 w-48 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20 transition-all shadow-sm"
                   />
                 ) : (
@@ -1985,10 +2070,10 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
               <div>
                 <div className="text-blue-700/70 text-xs font-medium mb-1">Total Contract Amount</div>
                 {isEditing ? (
-                  <input 
-                    type="number" 
-                    value={editData?.totalCost || 0} 
-                    onChange={e => setEditData(prev => prev ? {...prev, totalCost: Number(e.target.value)} : null)}
+                  <input
+                    type="number"
+                    value={editData?.totalCost || 0}
+                    onChange={e => setEditData(prev => prev ? { ...prev, totalCost: Number(e.target.value) } : null)}
                     className="text-2xl font-bold text-blue-900 bg-white border-2 border-blue-200 rounded-lg px-3 py-1 w-48 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 transition-all shadow-sm"
                   />
                 ) : (
@@ -2017,33 +2102,33 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
           <div className="flex items-center gap-2 font-bold text-brand-dark mb-4">
             <CreditCard size={20} /> PAYMENT MILESTONES
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden">
             <div className="flex items-center gap-4 p-4 border-b border-brand-secondary/30 bg-brand-muted/15 text-xs font-bold text-brand-dark/80">
               <div className="w-[60px] text-center shrink-0">DONE</div>
               <div className="flex-1">MILESTONE</div>
               <div className="w-[60px] text-center shrink-0">ACTION</div>
             </div>
-            
+
             <div className="divide-y divide-brand-dark/5">
               {milestones.map((m, idx) => (
                 <div key={m.id} className="flex flex-col hover:bg-brand-dark/[0.02] transition-colors pb-6">
                   <div className="flex items-center gap-4 p-4">
                     <div className="flex justify-center w-[60px] shrink-0">
-                      <button 
+                      <button
                         onClick={() => isEditing ? updateMilestone(idx, 'isDone', !m.isDone) : quickUpdateStatus(idx, 'isDone', !m.isDone)}
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${m.isDone ? 'bg-emerald-50 border-emerald-500 text-emerald-500' : 'border-brand-secondary/50 text-transparent hover:border-brand-dark/40'}`}
                       >
                         <Check size={14} strokeWidth={3} />
                       </button>
                     </div>
-                    
+
                     <div className="font-bold text-brand-dark flex-1 flex items-center gap-2">
                       <span className="text-brand-secondary">{idx + 1}.</span>
                       {isEditing ? (
-                        <input 
-                          type="text" 
-                          value={m.name} 
+                        <input
+                          type="text"
+                          value={m.name}
                           onChange={e => updateMilestone(idx, 'name', e.target.value)}
                           className="w-full max-w-md px-3 py-1.5 bg-white border-2 border-brand-secondary/30 rounded-lg focus:outline-none focus:border-brand-dark/30 focus:ring-4 focus:ring-brand-dark/5 font-normal transition-all shadow-sm"
                         />
@@ -2051,7 +2136,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                         <span className="text-lg">{m.name}</span>
                       )}
                     </div>
-                    
+
                     <div className="flex justify-center w-[60px] shrink-0">
                       {isEditing ? (
                         <button onClick={() => removeMilestone(idx)} className="text-brand-dark/30 hover:text-red-500 transition-colors p-2">
@@ -2068,7 +2153,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                   {/* Detailed Fields Row */}
                   <div className="px-4 pl-[76px] pr-4 md:pr-[76px]">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      
+
                       {/* Customer (AR) Details */}
                       <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-5">
                         <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-emerald-200/50">
@@ -2079,9 +2164,9 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                             <div className="flex items-center bg-white/60 rounded-md px-3 py-1.5 border border-emerald-200">
                               <span className="text-xs text-emerald-700/50 font-bold mr-2">USD</span>
                               {isEditing ? (
-                                <input 
-                                  type="number" 
-                                  value={m.customerAmount} 
+                                <input
+                                  type="number"
+                                  value={m.customerAmount}
                                   onChange={e => updateMilestone(idx, 'customerAmount', Number(e.target.value))}
                                   className="w-24 bg-white border-2 border-emerald-200 rounded-md px-2 py-0.5 font-mono font-bold text-emerald-900 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-all shadow-sm"
                                 />
@@ -2090,13 +2175,12 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                               )}
                             </div>
                             <div className="relative min-w-[110px]">
-                              <select 
-                                value={m.customerStatus} 
+                              <select
+                                value={m.customerStatus}
                                 onChange={e => isEditing ? updateMilestone(idx, 'customerStatus', e.target.value) : quickUpdateStatus(idx, 'customerStatus', e.target.value)}
-                                className={`appearance-none w-full px-3 py-1.5 pr-8 rounded-md text-xs font-bold border focus:outline-none cursor-pointer ${
-                                  m.customerStatus === 'Paid' ? 'bg-emerald-600 text-white border-emerald-700' : 
+                                className={`appearance-none w-full px-3 py-1.5 pr-8 rounded-md text-xs font-bold border focus:outline-none cursor-pointer ${m.customerStatus === 'Paid' ? 'bg-emerald-600 text-white border-emerald-700' :
                                   'bg-white text-emerald-900 border-emerald-200 hover:bg-emerald-50'
-                                }`}
+                                  }`}
                               >
                                 <option value="Paid">PAID</option>
                                 <option value="Invoiced">INVOICED</option>
@@ -2155,7 +2239,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                               <div className="text-sm font-medium text-emerald-900 bg-white/50 px-3 py-2 rounded-lg border border-transparent">{m.customerDateReceived || '-'}</div>
                             )}
                           </div>
-                          
+
                           {/* Tax & Retainage */}
                           <div>
                             <label className="block text-[10px] font-bold text-emerald-900/60 uppercase mb-1.5">Retainage %</label>
@@ -2225,9 +2309,9 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                             <div className="flex items-center bg-white/60 rounded-md px-3 py-1.5 border border-blue-200">
                               <span className="text-xs text-blue-700/50 font-bold mr-2">USD</span>
                               {isEditing ? (
-                                <input 
-                                  type="number" 
-                                  value={m.hqAmount} 
+                                <input
+                                  type="number"
+                                  value={m.hqAmount}
                                   onChange={e => updateMilestone(idx, 'hqAmount', Number(e.target.value))}
                                   className="w-24 bg-white border-2 border-blue-200 rounded-md px-2 py-0.5 font-mono font-bold text-blue-900 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all shadow-sm"
                                 />
@@ -2236,13 +2320,12 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                               )}
                             </div>
                             <div className="relative min-w-[120px]">
-                              <select 
-                                value={m.hqStatus} 
+                              <select
+                                value={m.hqStatus}
                                 onChange={e => isEditing ? updateMilestone(idx, 'hqStatus', e.target.value) : quickUpdateStatus(idx, 'hqStatus', e.target.value)}
-                                className={`appearance-none w-full px-3 py-1.5 pr-8 rounded-md text-xs font-bold border focus:outline-none cursor-pointer ${
-                                  m.hqStatus === 'Paid' ? 'bg-blue-600 text-white border-blue-700' : 
+                                className={`appearance-none w-full px-3 py-1.5 pr-8 rounded-md text-xs font-bold border focus:outline-none cursor-pointer ${m.hqStatus === 'Paid' ? 'bg-blue-600 text-white border-blue-700' :
                                   'bg-white text-blue-900 border-blue-200 hover:bg-blue-50'
-                                }`}
+                                  }`}
                               >
                                 <option value="Paid">PAID</option>
                                 <option value="Pending">PENDING</option>
@@ -2301,7 +2384,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                               <div className="text-sm font-medium text-blue-900 bg-white/50 px-3 py-2 rounded-lg border border-transparent">{m.hqDatePaid || '-'}</div>
                             )}
                           </div>
-                          
+
                           {/* Tax & Retainage */}
                           <div>
                             <label className="block text-[10px] font-bold text-blue-900/60 uppercase mb-1.5">Retainage %</label>
@@ -2366,10 +2449,10 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
                 </div>
               ))}
             </div>
-            
+
             {isEditing && (
               <div className="p-4 border-t border-brand-secondary/30">
-                <button 
+                <button
                   onClick={addMilestone}
                   className="w-full py-3 border-2 border-dashed border-brand-secondary/50 rounded-lg text-brand-secondary font-medium hover:border-brand-dark/40 hover:text-brand-dark transition-colors flex items-center justify-center gap-2"
                 >
@@ -2386,7 +2469,7 @@ function ProjectPaymentCard({ project, onUpdateProject }: { project: Project, on
 
 function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUpdateProject: (p: Project) => void, key?: string }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -2395,10 +2478,10 @@ function PaymentsView({ projects, onUpdateProject }: { projects: Project[], onUp
       <div className="flex flex-col gap-8">
         {projects.length > 0 ? (
           projects.map(project => (
-            <ProjectPaymentCard 
-              key={project.id} 
-              project={project} 
-              onUpdateProject={onUpdateProject} 
+            <ProjectPaymentCard
+              key={project.id}
+              project={project}
+              onUpdateProject={onUpdateProject}
             />
           ))
         ) : (
@@ -2416,7 +2499,7 @@ function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProje
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 
+      <h3
         className="text-lg font-bold text-brand-dark border-b border-brand-secondary/30 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
         onClick={() => setIsGroupExpanded(!isGroupExpanded)}
       >
@@ -2427,19 +2510,19 @@ function CarrierGroup({ carrier, projs, expandedId, setExpandedId, onUpdateProje
       </h3>
       <AnimatePresence>
         {isGroupExpanded && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="flex flex-col gap-3 overflow-hidden"
           >
             {projs.map(p => (
-              <TransportationCard 
-                key={p.id} 
-                project={p} 
-                isExpanded={expandedId === p.id} 
-                onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)} 
-                onUpdate={onUpdateProject} 
+              <TransportationCard
+                key={p.id}
+                project={p}
+                isExpanded={expandedId === p.id}
+                onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)}
+                onUpdate={onUpdateProject}
               />
             ))}
           </motion.div>
@@ -2460,7 +2543,7 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
   }, {} as Record<string, Project[]>);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -2470,18 +2553,18 @@ function TransportationView({ projects, onUpdateProject }: { projects: Project[]
         <Truck className="text-brand-secondary" />
         Transportation Overview
       </h2>
-      
+
       {projects.length === 0 ? (
         <div className="p-8 text-center text-brand-secondary bg-white rounded-xl border border-brand-secondary/30">No projects found.</div>
       ) : (
         Object.entries(groupedProjects).map(([carrier, projs]) => (
-          <CarrierGroup 
-            key={carrier} 
-            carrier={carrier} 
-            projs={projs} 
-            expandedId={expandedId} 
-            setExpandedId={setExpandedId} 
-            onUpdateProject={onUpdateProject} 
+          <CarrierGroup
+            key={carrier}
+            carrier={carrier}
+            projs={projs}
+            expandedId={expandedId}
+            setExpandedId={setExpandedId}
+            onUpdateProject={onUpdateProject}
           />
         ))
       )}
@@ -2525,7 +2608,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-brand-secondary/30 overflow-hidden transition-all">
-      <div 
+      <div
         className="p-4 flex items-center justify-between cursor-pointer hover:bg-brand-muted/15"
         onClick={onToggle}
       >
@@ -2548,7 +2631,14 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Serial #</span>
-            <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
+            {project.units && project.units.length > 1 ? (
+              <span className="text-sm text-brand-dark flex items-center gap-1.5" title={`${project.serialNumber || '-'} (+${project.units.length - 1} more)`}>
+                <span className="truncate max-w-[100px]">{project.serialNumber || '-'}</span>
+                <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-bold shrink-0">+{project.units.length - 1}</span>
+              </span>
+            ) : (
+              <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Departure</span>
@@ -2589,7 +2679,7 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
 
       <AnimatePresence>
         {isExpanded && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -2598,78 +2688,78 @@ function TransportationCard({ project, isExpanded, onToggle, onUpdate }: { proje
             <div className="p-6 flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                 {/* General Info */}
-              <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">General Info</h4>
-                <Field label="Unit Type" value={project.unitType || ''} onChange={(v) => handleChange('unitType', v as any)} />
-                <Field label="Serial #" value={project.serialNumber || ''} onChange={(v) => handleChange('serialNumber', v)} />
-                <Field label="Customer" value={project.customer || ''} onChange={(v) => handleChange('customer', v)} />
-                <Field label="Project" value={project.name || ''} onChange={(v) => handleChange('name', v)} />
-                <Field label="KV" value={project.kv || ''} onChange={(v) => handleChange('kv', v)} />
-                <Field label="MVA" value={project.mva || ''} onChange={(v) => handleChange('mva', v)} />
-                <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
-              </div>
-
-              {/* Ocean Transportation */}
-              <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Ocean Transportation</h4>
-                <CheckboxWithDateField label="1. CIPL" checked={getDoc('CIPL')} date={getDocDate('CIPL')} onCheckChange={(v) => handleDocChange('CIPL', v)} onDateChange={(v) => handleDocChange('CIPL', getDoc('CIPL'), v)} />
-                <CheckboxWithDateField label="2. ISF Filling" checked={getDoc('ISF')} date={getDocDate('ISF')} onCheckChange={(v) => handleDocChange('ISF', v)} onDateChange={(v) => handleDocChange('ISF', getDoc('ISF'), v)} />
-                <CheckboxWithDateField label="3. SBL" checked={getDoc('SBL')} date={getDocDate('SBL')} onCheckChange={(v) => handleDocChange('SBL', v)} onDateChange={(v) => handleDocChange('SBL', getDoc('SBL'), v)} />
-                <CheckboxWithDateField label="4. Inventory" checked={getDoc('Inventory')} date={getDocDate('Inventory')} onCheckChange={(v) => handleDocChange('Inventory', v)} onDateChange={(v) => handleDocChange('Inventory', getDoc('Inventory'), v)} />
-                <CheckboxWithDateField label="5. AN" checked={getDoc('Arrival Notice')} date={getDocDate('Arrival Notice')} onCheckChange={(v) => handleDocChange('Arrival Notice', v)} onDateChange={(v) => handleDocChange('Arrival Notice', getDoc('Arrival Notice'), v)} />
-                <CheckboxWithDateField label="6. Customs Clearance" checked={getDoc('Customs Clearance')} date={getDocDate('Customs Clearance')} onCheckChange={(v) => handleDocChange('Customs Clearance', v)} onDateChange={(v) => handleDocChange('Customs Clearance', getDoc('Customs Clearance'), v)} />
-                
-                <div className="pt-6 mt-2 border-t border-brand-secondary/30">
-                  <h5 className="text-xs font-bold text-brand-secondary uppercase tracking-wider mb-2">Document Sharing (Vendor)</h5>
-                  <CheckboxWithDateField label="Packing List" checked={getDoc('Vendor - Packing List')} date={getDocDate('Vendor - Packing List')} onCheckChange={(v) => handleDocChange('Vendor - Packing List', v)} onDateChange={(v) => handleDocChange('Vendor - Packing List', getDoc('Vendor - Packing List'), v)} />
-                  <CheckboxWithDateField label="SBL" checked={getDoc('Vendor - SBL')} date={getDocDate('Vendor - SBL')} onCheckChange={(v) => handleDocChange('Vendor - SBL', v)} onDateChange={(v) => handleDocChange('Vendor - SBL', getDoc('Vendor - SBL'), v)} />
-                  <CheckboxWithDateField label="AN" checked={getDoc('Vendor - AN')} date={getDocDate('Vendor - AN')} onCheckChange={(v) => handleDocChange('Vendor - AN', v)} onDateChange={(v) => handleDocChange('Vendor - AN', getDoc('Vendor - AN'), v)} />
+                <div className="space-y-4">
+                  <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">General Info</h4>
+                  <Field label="Unit Type" value={project.unitType || ''} onChange={(v) => handleChange('unitType', v as any)} />
+                  <Field label="Serial #" value={project.serialNumber || ''} onChange={(v) => handleChange('serialNumber', v)} />
+                  <Field label="Customer" value={project.customer || ''} onChange={(v) => handleChange('customer', v)} />
+                  <Field label="Project" value={project.name || ''} onChange={(v) => handleChange('name', v)} />
+                  <Field label="KV" value={project.kv || ''} onChange={(v) => handleChange('kv', v)} />
+                  <Field label="MVA" value={project.mva || ''} onChange={(v) => handleChange('mva', v)} />
+                  <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
                 </div>
 
-              </div>
+                {/* Ocean Transportation */}
+                <div className="space-y-4">
+                  <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Ocean Transportation</h4>
+                  <CheckboxWithDateField label="1. CIPL" checked={getDoc('CIPL')} date={getDocDate('CIPL')} onCheckChange={(v) => handleDocChange('CIPL', v)} onDateChange={(v) => handleDocChange('CIPL', getDoc('CIPL'), v)} />
+                  <CheckboxWithDateField label="2. ISF Filling" checked={getDoc('ISF')} date={getDocDate('ISF')} onCheckChange={(v) => handleDocChange('ISF', v)} onDateChange={(v) => handleDocChange('ISF', getDoc('ISF'), v)} />
+                  <CheckboxWithDateField label="3. SBL" checked={getDoc('SBL')} date={getDocDate('SBL')} onCheckChange={(v) => handleDocChange('SBL', v)} onDateChange={(v) => handleDocChange('SBL', getDoc('SBL'), v)} />
+                  <CheckboxWithDateField label="4. Inventory" checked={getDoc('Inventory')} date={getDocDate('Inventory')} onCheckChange={(v) => handleDocChange('Inventory', v)} onDateChange={(v) => handleDocChange('Inventory', getDoc('Inventory'), v)} />
+                  <CheckboxWithDateField label="5. AN" checked={getDoc('Arrival Notice')} date={getDocDate('Arrival Notice')} onCheckChange={(v) => handleDocChange('Arrival Notice', v)} onDateChange={(v) => handleDocChange('Arrival Notice', getDoc('Arrival Notice'), v)} />
+                  <CheckboxWithDateField label="6. Customs Clearance" checked={getDoc('Customs Clearance')} date={getDocDate('Customs Clearance')} onCheckChange={(v) => handleDocChange('Customs Clearance', v)} onDateChange={(v) => handleDocChange('Customs Clearance', getDoc('Customs Clearance'), v)} />
 
-              {/* Inland Transportation */}
-              <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Inland Transportation</h4>
-                <CheckboxWithDateField label="1. Rail Clearance" checked={getDoc('Rail Clearance')} date={getDocDate('Rail Clearance')} onCheckChange={(v) => handleDocChange('Rail Clearance', v)} onDateChange={(v) => handleDocChange('Rail Clearance', getDoc('Rail Clearance'), v)} />
-                <CheckboxWithDateField label="2. Route Survey" checked={getDoc('Route Survey')} date={getDocDate('Route Survey')} onCheckChange={(v) => handleDocChange('Route Survey', v)} onDateChange={(v) => handleDocChange('Route Survey', getDoc('Route Survey'), v)} />
-                <CheckboxWithDateField label="3. HH Permit" checked={getDoc('HH Permit status')} date={getDocDate('HH Permit status')} onCheckChange={(v) => handleDocChange('HH Permit status', v)} onDateChange={(v) => handleDocChange('HH Permit status', getDoc('HH Permit status'), v)} />
-                <CheckboxWithDateField label="4. Site Visit" checked={getDoc('Site visit report')} date={getDocDate('Site visit report')} onCheckChange={(v) => handleDocChange('Site visit report', v)} onDateChange={(v) => handleDocChange('Site visit report', getDoc('Site visit report'), v)} />
-                <CheckboxWithDateField label="5. Loading Drawing" checked={getDoc('Loading Drawing')} date={getDocDate('Loading Drawing')} onCheckChange={(v) => handleDocChange('Loading Drawing', v)} onDateChange={(v) => handleDocChange('Loading Drawing', getDoc('Loading Drawing'), v)} />
-                <CheckboxWithDateField label="6. Transportation Plan" checked={getDoc('Transportation Plan')} date={getDocDate('Transportation Plan')} onCheckChange={(v) => handleDocChange('Transportation Plan', v)} onDateChange={(v) => handleDocChange('Transportation Plan', getDoc('Transportation Plan'), v)} />
-                
-                <div className="pt-6 mt-2 border-t border-brand-secondary/30">
-                  <h5 className="text-xs font-bold text-brand-secondary uppercase tracking-wider mb-2">Document Sharing (Broker)</h5>
-                  <CheckboxWithDateField label="CIPL" checked={getDoc('Broker - CIPL')} date={getDocDate('Broker - CIPL')} onCheckChange={(v) => handleDocChange('Broker - CIPL', v)} onDateChange={(v) => handleDocChange('Broker - CIPL', getDoc('Broker - CIPL'), v)} />
-                  <CheckboxWithDateField label="SBL" checked={getDoc('Broker - SBL')} date={getDocDate('Broker - SBL')} onCheckChange={(v) => handleDocChange('Broker - SBL', v)} onDateChange={(v) => handleDocChange('Broker - SBL', getDoc('Broker - SBL'), v)} />
-                  <CheckboxWithDateField label="AN" checked={getDoc('Broker - AN')} date={getDocDate('Broker - AN')} onCheckChange={(v) => handleDocChange('Broker - AN', v)} onDateChange={(v) => handleDocChange('Broker - AN', getDoc('Broker - AN'), v)} />
-                  <CheckboxWithDateField label="COO" checked={getDoc('Broker - COO')} date={getDocDate('Broker - COO')} onCheckChange={(v) => handleDocChange('Broker - COO', v)} onDateChange={(v) => handleDocChange('Broker - COO', getDoc('Broker - COO'), v)} />
+                  <div className="pt-6 mt-2 border-t border-brand-secondary/30">
+                    <h5 className="text-xs font-bold text-brand-secondary uppercase tracking-wider mb-2">Document Sharing (Vendor)</h5>
+                    <CheckboxWithDateField label="Packing List" checked={getDoc('Vendor - Packing List')} date={getDocDate('Vendor - Packing List')} onCheckChange={(v) => handleDocChange('Vendor - Packing List', v)} onDateChange={(v) => handleDocChange('Vendor - Packing List', getDoc('Vendor - Packing List'), v)} />
+                    <CheckboxWithDateField label="SBL" checked={getDoc('Vendor - SBL')} date={getDocDate('Vendor - SBL')} onCheckChange={(v) => handleDocChange('Vendor - SBL', v)} onDateChange={(v) => handleDocChange('Vendor - SBL', getDoc('Vendor - SBL'), v)} />
+                    <CheckboxWithDateField label="AN" checked={getDoc('Vendor - AN')} date={getDocDate('Vendor - AN')} onCheckChange={(v) => handleDocChange('Vendor - AN', v)} onDateChange={(v) => handleDocChange('Vendor - AN', getDoc('Vendor - AN'), v)} />
+                  </div>
+
+                </div>
+
+                {/* Inland Transportation */}
+                <div className="space-y-4">
+                  <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Inland Transportation</h4>
+                  <CheckboxWithDateField label="1. Rail Clearance" checked={getDoc('Rail Clearance')} date={getDocDate('Rail Clearance')} onCheckChange={(v) => handleDocChange('Rail Clearance', v)} onDateChange={(v) => handleDocChange('Rail Clearance', getDoc('Rail Clearance'), v)} />
+                  <CheckboxWithDateField label="2. Route Survey" checked={getDoc('Route Survey')} date={getDocDate('Route Survey')} onCheckChange={(v) => handleDocChange('Route Survey', v)} onDateChange={(v) => handleDocChange('Route Survey', getDoc('Route Survey'), v)} />
+                  <CheckboxWithDateField label="3. HH Permit" checked={getDoc('HH Permit status')} date={getDocDate('HH Permit status')} onCheckChange={(v) => handleDocChange('HH Permit status', v)} onDateChange={(v) => handleDocChange('HH Permit status', getDoc('HH Permit status'), v)} />
+                  <CheckboxWithDateField label="4. Site Visit" checked={getDoc('Site visit report')} date={getDocDate('Site visit report')} onCheckChange={(v) => handleDocChange('Site visit report', v)} onDateChange={(v) => handleDocChange('Site visit report', getDoc('Site visit report'), v)} />
+                  <CheckboxWithDateField label="5. Loading Drawing" checked={getDoc('Loading Drawing')} date={getDocDate('Loading Drawing')} onCheckChange={(v) => handleDocChange('Loading Drawing', v)} onDateChange={(v) => handleDocChange('Loading Drawing', getDoc('Loading Drawing'), v)} />
+                  <CheckboxWithDateField label="6. Transportation Plan" checked={getDoc('Transportation Plan')} date={getDocDate('Transportation Plan')} onCheckChange={(v) => handleDocChange('Transportation Plan', v)} onDateChange={(v) => handleDocChange('Transportation Plan', getDoc('Transportation Plan'), v)} />
+
+                  <div className="pt-6 mt-2 border-t border-brand-secondary/30">
+                    <h5 className="text-xs font-bold text-brand-secondary uppercase tracking-wider mb-2">Document Sharing (Broker)</h5>
+                    <CheckboxWithDateField label="CIPL" checked={getDoc('Broker - CIPL')} date={getDocDate('Broker - CIPL')} onCheckChange={(v) => handleDocChange('Broker - CIPL', v)} onDateChange={(v) => handleDocChange('Broker - CIPL', getDoc('Broker - CIPL'), v)} />
+                    <CheckboxWithDateField label="SBL" checked={getDoc('Broker - SBL')} date={getDocDate('Broker - SBL')} onCheckChange={(v) => handleDocChange('Broker - SBL', v)} onDateChange={(v) => handleDocChange('Broker - SBL', getDoc('Broker - SBL'), v)} />
+                    <CheckboxWithDateField label="AN" checked={getDoc('Broker - AN')} date={getDocDate('Broker - AN')} onCheckChange={(v) => handleDocChange('Broker - AN', v)} onDateChange={(v) => handleDocChange('Broker - AN', getDoc('Broker - AN'), v)} />
+                    <CheckboxWithDateField label="COO" checked={getDoc('Broker - COO')} date={getDocDate('Broker - COO')} onCheckChange={(v) => handleDocChange('Broker - COO', v)} onDateChange={(v) => handleDocChange('Broker - COO', getDoc('Broker - COO'), v)} />
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="space-y-4">
+                  <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Dates</h4>
+                  <DateField label="Departure from Korea" value={project.oceanFreight.etd || ''} onChange={(v) => handleChange('etd', v, 'oceanFreight')} />
+                  <DateField label="Arrival at US Port" value={project.oceanFreight.eta || ''} onChange={(v) => handleChange('eta', v, 'oceanFreight')} />
+                  <DateField label="CIF Date" value={project.oceanFreight.cifDate || ''} onChange={(v) => handleChange('cifDate', v, 'oceanFreight')} />
+                  <DateField label="Actual Ship out (KR)" value={project.oceanFreight.atd || ''} onChange={(v) => handleChange('atd', v, 'oceanFreight')} />
+                  <DateField label="Actual Arrival (US)" value={project.oceanFreight.ata || ''} onChange={(v) => handleChange('ata', v, 'oceanFreight')} />
+                  <DateField label="DDP date" value={project.inlandTransport.ddpDate || ''} onChange={(v) => handleChange('ddpDate', v, 'inlandTransport')} />
+                </div>
+
+                {/* Logistics Details */}
+                <div className="space-y-4">
+                  <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Logistics Details</h4>
+                  <Field label="Transit time" value={project.inlandTransport.transitTime || ''} onChange={(v) => handleChange('transitTime', v, 'inlandTransport')} />
+                  <Field label="Port" value={project.inlandTransport.port || project.origin || ''} onChange={(v) => handleChange('port', v, 'inlandTransport')} />
+                  <Field label="Site Address" value={project.destination || ''} onChange={(v) => handleChange('destination', v)} />
+                  <SelectField label="Method" value={project.inlandTransport.dischargingMethod || ''} options={['Rail', 'Trailer', 'Barge']} onChange={(v) => handleChange('dischargingMethod', v, 'inlandTransport')} />
+                  <Field label="Railcar #" value={project.inlandTransport.railcarNumber || ''} onChange={(v) => handleChange('railcarNumber', v, 'inlandTransport')} />
+                  <Field label="HH Vendor" value={project.inlandTransport.hhVendor || ''} onChange={(v) => handleChange('hhVendor', v, 'inlandTransport')} />
+                  <Field label="Rigging Vendor" value={project.inlandTransport.riggingVendor || project.installation.contractor || ''} onChange={(v) => handleChange('riggingVendor', v, 'inlandTransport')} />
                 </div>
               </div>
-
-              {/* Dates */}
-              <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Dates</h4>
-                <DateField label="Departure from Korea" value={project.oceanFreight.etd || ''} onChange={(v) => handleChange('etd', v, 'oceanFreight')} />
-                <DateField label="Arrival at US Port" value={project.oceanFreight.eta || ''} onChange={(v) => handleChange('eta', v, 'oceanFreight')} />
-                <DateField label="CIF Date" value={project.oceanFreight.cifDate || ''} onChange={(v) => handleChange('cifDate', v, 'oceanFreight')} />
-                <DateField label="Actual Ship out (KR)" value={project.oceanFreight.atd || ''} onChange={(v) => handleChange('atd', v, 'oceanFreight')} />
-                <DateField label="Actual Arrival (US)" value={project.oceanFreight.ata || ''} onChange={(v) => handleChange('ata', v, 'oceanFreight')} />
-                <DateField label="DDP date" value={project.inlandTransport.ddpDate || ''} onChange={(v) => handleChange('ddpDate', v, 'inlandTransport')} />
-              </div>
-
-              {/* Logistics Details */}
-              <div className="space-y-4">
-                <h4 className="font-bold text-brand-dark border-b border-brand-secondary/30 pb-2">Logistics Details</h4>
-                <Field label="Transit time" value={project.inlandTransport.transitTime || ''} onChange={(v) => handleChange('transitTime', v, 'inlandTransport')} />
-                <Field label="Port" value={project.inlandTransport.port || project.origin || ''} onChange={(v) => handleChange('port', v, 'inlandTransport')} />
-                <Field label="Site Address" value={project.destination || ''} onChange={(v) => handleChange('destination', v)} />
-                <SelectField label="Method" value={project.inlandTransport.dischargingMethod || ''} options={['Rail', 'Trailer', 'Barge']} onChange={(v) => handleChange('dischargingMethod', v, 'inlandTransport')} />
-                <Field label="Railcar #" value={project.inlandTransport.railcarNumber || ''} onChange={(v) => handleChange('railcarNumber', v, 'inlandTransport')} />
-                <Field label="HH Vendor" value={project.inlandTransport.hhVendor || ''} onChange={(v) => handleChange('hhVendor', v, 'inlandTransport')} />
-                <Field label="Rigging Vendor" value={project.inlandTransport.riggingVendor || project.installation.contractor || ''} onChange={(v) => handleChange('riggingVendor', v, 'inlandTransport')} />
-              </div>
-            </div>
             </div>
           </motion.div>
         )}
@@ -2683,7 +2773,7 @@ function SelectField({ label, value, options, onChange }: { label: string, value
     <div className="flex flex-col gap-1">
       <label className="text-xs font-bold text-brand-dark/80">{label}</label>
       <div className="relative">
-        <select 
+        <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full px-3 py-1.5 bg-white border border-brand-secondary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/30 transition-shadow appearance-none"
@@ -2701,7 +2791,7 @@ function Field({ label, value, onChange, type = "text" }: { label: string, value
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-bold text-brand-dark/80">{label}</label>
-      <input 
+      <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -2715,7 +2805,7 @@ function TextAreaField({ label, value, onChange, placeholder }: { label: string,
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-bold text-brand-dark/80">{label}</label>
-      <textarea 
+      <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -2739,9 +2829,9 @@ function CheckboxWithDateField({ label, checked, date, onCheckChange, onDateChan
         </div>
         <span className="text-sm font-medium text-brand-dark/80 group-hover:text-brand-dark truncate">{label}</span>
       </label>
-      <input 
-        type="date" 
-        value={date} 
+      <input
+        type="date"
+        value={date}
         onChange={(e) => onDateChange(e.target.value)}
         className="px-2 py-1 bg-white border border-brand-secondary/50 rounded text-xs focus:outline-none focus:ring-1 focus:ring-brand-dark/30 w-32"
       />
@@ -2766,7 +2856,7 @@ function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdat
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 
+      <h3
         className="text-lg font-bold text-brand-dark border-b border-brand-secondary/30 pb-2 flex items-center gap-2 cursor-pointer hover:text-brand-dark/80 transition-colors select-none"
         onClick={() => setIsGroupExpanded(!isGroupExpanded)}
       >
@@ -2777,19 +2867,19 @@ function ContractorGroup({ contractor, projs, expandedId, setExpandedId, onUpdat
       </h3>
       <AnimatePresence>
         {isGroupExpanded && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="flex flex-col gap-3 overflow-hidden"
           >
             {projs.map(p => (
-              <InstallationCard 
-                key={p.id} 
-                project={p} 
-                isExpanded={expandedId === p.id} 
-                onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)} 
-                onUpdate={onUpdateProject} 
+              <InstallationCard
+                key={p.id}
+                project={p}
+                isExpanded={expandedId === p.id}
+                onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)}
+                onUpdate={onUpdateProject}
               />
             ))}
           </motion.div>
@@ -2843,7 +2933,14 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Serial #</span>
-            <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
+            {project.units && project.units.length > 1 ? (
+              <span className="text-sm text-brand-dark flex items-center gap-1.5" title={`${project.serialNumber || '-'} (+${project.units.length - 1} more)`}>
+                <span className="truncate max-w-[100px]">{project.serialNumber || '-'}</span>
+                <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded-full font-bold shrink-0">+{project.units.length - 1}</span>
+              </span>
+            ) : (
+              <span className="text-sm text-brand-dark truncate" title={project.serialNumber || '-'}>{project.serialNumber || '-'}</span>
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-brand-secondary font-bold uppercase tracking-wider">Start Date</span>
@@ -2864,7 +2961,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
 
       <AnimatePresence>
         {isExpanded && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -2884,7 +2981,7 @@ function InstallationCard({ project, isExpanded, onToggle, onUpdate }: { project
                 <Field label="Supervisor" value={project.installation.supervisor || ''} onChange={(v) => handleChange('supervisor', v, 'installation')} />
                 <Field label="Site Address" value={project.destination || ''} onChange={(v) => handleChange('destination', v)} />
               </div>
-              
+
               <TextAreaField label="Site Contact" value={project.inlandTransport.siteContact || ''} onChange={(v) => handleChange('siteContact', v, 'inlandTransport')} />
 
               <div className="space-y-3 pt-2">
@@ -2918,7 +3015,7 @@ function InstallationView({ projects, onUpdateProject }: { projects: Project[], 
   }, {} as Record<string, Project[]>);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -2928,18 +3025,18 @@ function InstallationView({ projects, onUpdateProject }: { projects: Project[], 
         <Wrench className="text-brand-secondary" />
         Installation Overview
       </h2>
-      
+
       {projects.length === 0 ? (
         <div className="p-8 text-center text-brand-secondary bg-white rounded-xl border border-brand-secondary/30">No projects found.</div>
       ) : (
         Object.entries(groupedProjects).map(([contractor, projs]) => (
-          <ContractorGroup 
-            key={contractor} 
-            contractor={contractor} 
-            projs={projs} 
-            expandedId={expandedId} 
-            setExpandedId={setExpandedId} 
-            onUpdateProject={onUpdateProject} 
+          <ContractorGroup
+            key={contractor}
+            contractor={contractor}
+            projs={projs}
+            expandedId={expandedId}
+            setExpandedId={setExpandedId}
+            onUpdateProject={onUpdateProject}
           />
         ))
       )}
